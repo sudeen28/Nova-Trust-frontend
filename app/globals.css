@@ -1,0 +1,64 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --navy: #0A1628;
+  --gold: #F0B429;
+  --font-inter: 'Inter', sans-serif;
+  --font-outfit: 'Outfit', sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  font-family: var(--font-inter);
+  background: #f8fafc;
+  color: #1e293b;
+}
+
+.font-display { font-family: var(--font-outfit); }
+
+/* Custom scrollbar */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: #f1f5f9; }
+::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+/* Card shimmer effect */
+.card-shimmer {
+  background: linear-gradient(135deg, #0A1628 0%, #1e2d5a 50%, #0A1628 100%);
+}
+
+/* Glass morphism */
+.glass {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+/* Animate number counting */
+@keyframes countUp {
+  from { opacity: 0; transform: translateY(5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.count-up { animation: countUp 0.5s ease-out; }
+
+/* Sidebar active state */
+.nav-active {
+  background: linear-gradient(135deg, rgba(240, 180, 41, 0.15) 0%, rgba(240, 180, 41, 0.05) 100%);
+  border-right: 3px solid #F0B429;
+  color: #F0B429;
+}
+
+/* Table row hover */
+.table-row-hover:hover { background: #f8fafc; }
+
+/* Status badges */
+.badge-active { @apply bg-green-100 text-green-700 text-xs font-medium px-2.5 py-0.5 rounded-full; }
+.badge-pending { @apply bg-yellow-100 text-yellow-700 text-xs font-medium px-2.5 py-0.5 rounded-full; }
+.badge-failed { @apply bg-red-100 text-red-700 text-xs font-medium px-2.5 py-0.5 rounded-full; }
+.badge-frozen { @apply bg-blue-100 text-blue-700 text-xs font-medium px-2.5 py-0.5 rounded-full; }
