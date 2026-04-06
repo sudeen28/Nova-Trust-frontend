@@ -3,317 +3,265 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../lib/api';
 import toast from 'react-hot-toast';
-import {
-  ArrowUpRight, ArrowDownLeft, ArrowLeftRight, TrendingUp,
-  Eye, EyeOff, Plus, Send, Download, CreditCard, RefreshCw
-} from 'lucide-react';
+import { ArrowUpRight, ArrowDownLeft, ArrowLeftRight, Send, Plus, Download, Eye, EyeOff, RefreshCw, TrendingUp, Landmark, DollarSign, PiggyBank, BarChart2, Zap, Smartphone, Camera } from 'lucide-react';
 import { format } from 'date-fns';
 import Link from 'next/link';
-import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
+import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
 
 const chartData = [
-  { month: 'Jul', balance: 4200 }, { month: 'Aug', balance: 6800 },
-  { month: 'Sep', balance: 5200 }, { month: 'Oct', balance: 9100 },
-  { month: 'Nov', balance: 7800 }, { month: 'Dec', balance: 11200 },
-  { month: 'Jan', balance: 15420 },
+  {m:'Aug',i:3200,o:1800},{m:'Sep',i:4100,o:2200},{m:'Oct',i:3800,o:2900},{m:'Nov',i:5200,o:2100},{m:'Dec',i:4600,o:3300},{m:'Jan',i:6100,o:2800},
 ];
+
+const ACCOUNT_ICONS = { CHECKING: DollarSign, SAVINGS: PiggyBank, INVESTMENT: BarChart2 };
+const ACCOUNT_COLORS = { CHECKING: '#FF6A00', SAVINGS: '#22c55e', INVESTMENT: '#6366f1' };
 
 export default function DashboardPage() {
   const { user } = useAuth();
-  const [account, setAccount] = useState(null);
+  const [accounts, setAccounts] = useState([]);
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [balanceVisible, setBalanceVisible] = useState(true);
-  const [depositModal, setDepositModal] = useState(false);
-  const [withdrawModal, setWithdrawModal] = useState(false);
+  const [modal, setModal] = useState(null);
   const [amount, setAmount] = useState('');
+  const [selectedAccount, setSelectedAccount] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
+  const [creatingAccount, setCreatingAccount] = useState(false);
 
-  useEffect(() => {
-    fetchData();
-  }, []);
+  useEffect(() => { fetchData(); }, []);
 
   const fetchData = async () => {
+    setLoading(true);
     try {
-      const [accRes, txRes] = await Promise.all([
-        api.get('/account'),
-        api.get('/transactions?limit=5'),
-      ]);
-      setAccount(accRes.data.data);
+      const [accRes, txRes] = await Promise.all([api.get('/account'), api.get('/transactions?limit=8')]);
+      setAccounts(accRes.data.data);
       setTransactions(txRes.data.data.transactions);
-    } catch {
-      toast.error('Failed to load dashboard data');
-    } finally {
-      setLoading(false);
-    }
+      if (accRes.data.data.length > 0) setSelectedAccount(accRes.data.data[0].id);
+    } catch { toast.error('Failed to load'); }
+    finally { setLoading(false); }
   };
 
-  const handleDeposit = async () => {
+  const totalBalance = accounts.reduce((sum, a) => sum + a.balance, 0);
+
+  const handleAction = async () => {
     if (!amount || parseFloat(amount) <= 0) return toast.error('Enter a valid amount');
     setActionLoading(true);
     try {
-      await api.post('/transactions/deposit', { amount: parseFloat(amount) });
-      toast.success(`$${amount} deposited successfully!`);
-      setDepositModal(false);
-      setAmount('');
-      fetchData();
-    } catch (err) {
-      toast.error(err.response?.data?.message || 'Deposit failed');
-    } finally {
-      setActionLoading(false);
-    }
+      await api.post(`/transactions/${modal}`, { amount: parseFloat(amount) });
+      toast.success(`${modal === 'deposit' ? 'Deposit' : 'Withdrawal'} successful`);
+      setModal(null); setAmount(''); fetchData();
+    } catch (err) { toast.error(err.response?.data?.message || 'Failed'); }
+    finally { setActionLoading(false); }
   };
 
-  const handleWithdraw = async () => {
-    if (!amount || parseFloat(amount) <= 0) return toast.error('Enter a valid amount');
-    setActionLoading(true);
-    try {
-      await api.post('/transactions/withdraw', { amount: parseFloat(amount) });
-      toast.success(`$${amount} withdrawn successfully!`);
-      setWithdrawModal(false);
-      setAmount('');
-      fetchData();
-    } catch (err) {
-      toast.error(err.response?.data?.message || 'Withdrawal failed');
-    } finally {
-      setActionLoading(false);
-    }
+  const createAccount = async (type) => {
+    setCreatingAccount(type);
+    try { await api.post('/account', { accountType: type }); toast.success(`${type} account created!`); fetchData(); }
+    catch (err) { toast.error(err.response?.data?.message || 'Failed'); }
+    finally { setCreatingAccount(false); }
   };
 
-  const getTxIcon = (tx) => {
-    if (tx.type === 'DEPOSIT') return <ArrowDownLeft size={16} className="text-green-600" />;
-    if (tx.type === 'WITHDRAWAL') return <ArrowUpRight size={16} className="text-red-500" />;
-    return <ArrowLeftRight size={16} className="text-blue-500" />;
+  const isCredit = (tx) => tx.toAccount?.userId === user?.id || tx.type === 'DEPOSIT' || tx.type === 'LOAN_DISBURSEMENT' || tx.type === 'MOBILE_DEPOSIT';
+  const txColor = (tx) => isCredit(tx) ? '#22c55e' : '#ef4444';
+
+  const txIcon = (type) => {
+    if (type === 'ZELLE') return <Zap size={13}/>;
+    if (type === 'CASHAPP') return <Smartphone size={13}/>;
+    if (['DEPOSIT','LOAN_DISBURSEMENT','MOBILE_DEPOSIT'].includes(type)) return <ArrowDownLeft size={13}/>;
+    return <ArrowUpRight size={13}/>;
   };
 
-  const getTxAmount = (tx) => {
-    const isCredit = tx.toAccount?.userId === user?.id || tx.type === 'DEPOSIT';
-    const color = isCredit ? 'text-green-600' : 'text-red-500';
-    const sign = isCredit ? '+' : '-';
-    return <span className={`font-semibold ${color}`}>{sign}${tx.amount.toFixed(2)}</span>;
-  };
-
-  const Modal = ({ title, onClose, onConfirm, confirmLabel, confirmColor }) => (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.5)' }}>
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 animate-slide-up">
-        <h3 className="text-xl font-bold font-display mb-1" style={{ color: '#0A1628' }}>{title}</h3>
-        <p className="text-slate-500 text-sm mb-5">Current balance: <span className="font-semibold text-slate-700">${account?.balance?.toFixed(2)}</span></p>
+  const Modal = () => (
+    <div className="modal-wrap">
+      <div className="modal">
+        <h3 className="font-display font-bold text-white text-lg mb-1">{modal === 'deposit' ? 'Deposit Funds' : 'Withdraw Funds'}</h3>
+        <p className="text-xs mb-4" style={{color:'rgba(255,255,255,0.35)'}}>Choose account and amount</p>
+        {accounts.length > 1 && (
+          <div className="mb-4">
+            <label className="block text-xs font-semibold tracking-widest mb-1.5" style={{color:'rgba(255,255,255,0.35)'}}>ACCOUNT</label>
+            <select value={selectedAccount} onChange={e=>setSelectedAccount(e.target.value)} className="inp px-3 py-3 rounded-xl text-sm">
+              {accounts.map(a => <option key={a.id} value={a.id}>{a.accountType} — ${a.balance.toFixed(2)}</option>)}
+            </select>
+          </div>
+        )}
         <div className="relative mb-5">
-          <span className="absolute left-4 top-1/2 -translate-y-1/2 text-2xl font-bold text-slate-300">$</span>
-          <input
-            type="number" min="1" value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-            className="w-full pl-10 pr-4 py-4 text-2xl font-bold rounded-xl border-2 border-slate-200 focus:outline-none focus:border-yellow-400 text-slate-900"
-            placeholder="0.00" autoFocus
-          />
+          <span className="absolute left-4 top-1/2 -translate-y-1/2 text-xl font-bold" style={{color:'rgba(255,255,255,0.2)'}}>$</span>
+          <input type="number" min="1" value={amount} onChange={e=>setAmount(e.target.value)} className="inp pl-9 pr-4 py-4 text-2xl font-bold rounded-xl" placeholder="0.00" autoFocus/>
         </div>
         <div className="flex gap-3">
-          <button onClick={onClose} className="flex-1 py-3 rounded-xl border border-slate-200 text-slate-600 font-medium hover:bg-slate-50">Cancel</button>
-          <button onClick={onConfirm} disabled={actionLoading}
-            className="flex-1 py-3 rounded-xl font-semibold text-white transition hover:opacity-90 disabled:opacity-60"
-            style={{ background: confirmColor }}>
-            {actionLoading ? '...' : confirmLabel}
+          <button onClick={()=>{setModal(null);setAmount('');}} className="btn-ghost flex-1 py-3 rounded-xl text-sm">Cancel</button>
+          <button onClick={handleAction} disabled={actionLoading} className="flex-1 py-3 rounded-xl text-sm font-semibold transition"
+            style={{background: modal==='deposit'?'rgba(34,197,94,0.15)':'rgba(239,68,68,0.15)', color: modal==='deposit'?'#4ade80':'#f87171', border:`1px solid ${modal==='deposit'?'rgba(34,197,94,0.25)':'rgba(239,68,68,0.25)'}`}}>
+            {actionLoading ? <div className="spinner mx-auto" style={{borderTopColor:modal==='deposit'?'#4ade80':'#f87171',borderColor:'rgba(255,255,255,0.2)'}}/> : modal==='deposit'?'Deposit':'Withdraw'}
           </button>
         </div>
       </div>
     </div>
   );
 
-  if (loading) {
-    return (
-      <div className="p-6 lg:p-8 space-y-6">
-        {[1,2,3].map(i => (
-          <div key={i} className="h-32 bg-slate-200 rounded-2xl animate-pulse" />
-        ))}
-      </div>
-    );
-  }
+  const accountTypes = ['CHECKING','SAVINGS','INVESTMENT'];
+  const existingTypes = accounts.map(a => a.accountType);
+  const missingTypes = accountTypes.filter(t => !existingTypes.includes(t));
+
+  if (loading) return (
+    <div className="p-6 lg:p-8 space-y-5">
+      {[100,80,80,200].map((h,i) => <div key={i} className="skeleton" style={{height:h}}/>)}
+    </div>
+  );
 
   return (
-    <div className="p-6 lg:p-8 space-y-6 animate-fade-in">
+    <div className="p-5 lg:p-7 space-y-5 anim-up">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold font-display" style={{ color: '#0A1628' }}>
-            Good {new Date().getHours() < 12 ? 'morning' : new Date().getHours() < 17 ? 'afternoon' : 'evening'}, {user?.firstName} 👋
-          </h1>
-          <p className="text-slate-500 text-sm mt-0.5">Here's your financial overview</p>
+          <p className="text-xs font-semibold tracking-widest" style={{color:'rgba(255,106,0,0.7)'}}>PRIVATE PORTFOLIO</p>
+          <h1 className="font-display text-2xl font-bold text-white mt-0.5">Account Overview</h1>
         </div>
-        <button onClick={fetchData} className="p-2.5 rounded-xl border border-slate-200 text-slate-500 hover:bg-slate-100 transition">
-          <RefreshCw size={18} />
-        </button>
+        <button onClick={fetchData} className="btn-ghost p-2.5 rounded-xl"><RefreshCw size={15}/></button>
       </div>
 
-      {/* Balance Card */}
-      <div className="relative rounded-2xl overflow-hidden shadow-lg" style={{
-        background: 'linear-gradient(135deg, #0A1628 0%, #1e2d5a 60%, #0A1628 100%)',
-        minHeight: 200
-      }}>
-        <div className="absolute inset-0 opacity-10" style={{
-          backgroundImage: 'radial-gradient(circle at 80% 20%, #F0B429 0%, transparent 50%)'
-        }} />
-        <div className="relative p-6 lg:p-8">
-          <div className="flex justify-between items-start mb-6">
-            <div>
-              <p className="text-sm font-medium mb-1" style={{ color: 'rgba(255,255,255,0.6)' }}>Total Balance</p>
-              <div className="flex items-center gap-3">
-                <h2 className="text-4xl font-bold font-display text-white">
-                  {balanceVisible ? `$${account?.balance?.toLocaleString('en-US', { minimumFractionDigits: 2 })}` : '••••••'}
-                </h2>
-                <button onClick={() => setBalanceVisible(!balanceVisible)} className="text-white/50 hover:text-white transition">
-                  {balanceVisible ? <EyeOff size={18} /> : <Eye size={18} />}
-                </button>
-              </div>
-              <p className="text-sm mt-1" style={{ color: 'rgba(255,255,255,0.4)' }}>
-                Acc: {account?.accountNumber?.replace(/(\d{4})(\d{4})(\d{5})/, '$1 $2 $3')}
-              </p>
-            </div>
-            <div className="text-right">
-              <p className="text-xs mb-1" style={{ color: 'rgba(255,255,255,0.4)' }}>Account type</p>
-              <span className="px-3 py-1 rounded-full text-xs font-semibold" style={{ background: 'rgba(240,180,41,0.2)', color: '#F0B429' }}>
-                {account?.accountType}
-              </span>
-            </div>
+      {/* Total Balance Hero */}
+      <div className="rounded-2xl p-6 relative overflow-hidden"
+        style={{background:'linear-gradient(135deg,#141414 0%,#1a1208 55%,#141414 100%)', border:'1px solid rgba(255,106,0,0.15)', boxShadow:'0 0 60px rgba(255,106,0,0.04)'}}>
+        <div className="absolute inset-0" style={{background:'radial-gradient(ellipse at 90% 50%, rgba(255,106,0,0.07) 0%, transparent 55%)', pointerEvents:'none'}}/>
+        <div className="relative z-10">
+          <p className="text-xs font-semibold tracking-widest mb-2" style={{color:'rgba(255,255,255,0.3)'}}>TOTAL ASSETS UNDER MANAGEMENT</p>
+          <div className="flex items-center gap-3 mb-5">
+            <h2 className="font-display text-5xl font-bold text-white">{balanceVisible ? `$${totalBalance.toLocaleString('en-US',{minimumFractionDigits:2})}` : '•••••••••'}</h2>
+            <button onClick={()=>setBalanceVisible(!balanceVisible)} style={{color:'rgba(255,255,255,0.2)'}} className="mt-1 transition hover:text-white">{balanceVisible?<EyeOff size={18}/>:<Eye size={18}/>}</button>
           </div>
-          <div className="flex gap-3 flex-wrap">
+          <div className="flex flex-wrap gap-2">
             {[
-              { label: 'Deposit', icon: Plus, onClick: () => setDepositModal(true), primary: true },
-              { label: 'Withdraw', icon: Download, onClick: () => setWithdrawModal(true) },
-              { label: 'Transfer', icon: Send, href: '/dashboard/transfer' },
-            ].map(({ label, icon: Icon, onClick, href, primary }) => {
-              const cls = `flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition hover:opacity-90 active:scale-95`;
-              const style = primary
-                ? { background: '#F0B429', color: '#0A1628' }
-                : { background: 'rgba(255,255,255,0.1)', color: 'white', border: '1px solid rgba(255,255,255,0.2)' };
-              if (href) return (
-                <Link key={label} href={href} className={cls} style={style}>
-                  <Icon size={15} />{label}
-                </Link>
-              );
-              return (
-                <button key={label} onClick={onClick} className={cls} style={style}>
-                  <Icon size={15} />{label}
-                </button>
-              );
+              {label:'Deposit',icon:Plus,action:()=>setModal('deposit'),style:{background:'rgba(34,197,94,0.12)',color:'#4ade80',border:'1px solid rgba(34,197,94,0.2)'}},
+              {label:'Withdraw',icon:Download,action:()=>setModal('withdraw'),style:{background:'rgba(239,68,68,0.1)',color:'#f87171',border:'1px solid rgba(239,68,68,0.15)'}},
+              {label:'Transfer',icon:Send,href:'/dashboard/transfer',style:{background:'rgba(255,106,0,0.12)',color:'#FF6A00',border:'1px solid rgba(255,106,0,0.2)'}},
+              {label:'Pay Bills',icon:DollarSign,href:'/dashboard/payments',style:{background:'rgba(99,102,241,0.12)',color:'#818cf8',border:'1px solid rgba(99,102,241,0.2)'}},
+            ].map(({label,icon:Icon,action,href,style})=>{
+              const cls="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold transition hover:-translate-y-0.5";
+              if(href) return <Link key={label} href={href} className={cls} style={style}><Icon size={13}/>{label}</Link>;
+              return <button key={label} onClick={action} className={cls} style={style}><Icon size={13}/>{label}</button>;
             })}
           </div>
         </div>
       </div>
 
-      {/* Stats row */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {[
-          { label: 'Currency', value: account?.currency || 'USD', icon: TrendingUp, color: '#6366f1' },
-          { label: 'Account Type', value: account?.accountType, icon: CreditCard, color: '#F0B429' },
-          { label: 'Status', value: account?.isActive ? 'Active' : 'Inactive', icon: ArrowDownLeft, color: '#22c55e' },
-          { label: 'KYC Status', value: user?.kyc?.status || 'Pending', icon: ArrowUpRight, color: '#f59e0b' },
-        ].map((stat) => (
-          <div key={stat.label} className="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm">
-            <div className="flex items-center gap-2 mb-3">
-              <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: `${stat.color}15` }}>
-                <stat.icon size={16} style={{ color: stat.color }} />
+      {/* Account Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {accounts.map(acc => {
+          const Icon = ACCOUNT_ICONS[acc.accountType] || DollarSign;
+          const color = ACCOUNT_COLORS[acc.accountType] || '#FF6A00';
+          return (
+            <div key={acc.id} className="card p-5">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{background:`${color}15`,color}}><Icon size={16}/></div>
+                  <div>
+                    <p className="text-xs font-semibold" style={{color:'rgba(255,255,255,0.4)'}}>{acc.accountType}</p>
+                    <p className="text-xs font-mono" style={{color:'rgba(255,255,255,0.2)'}}>{acc.accountNumber?.slice(-6)}</p>
+                  </div>
+                </div>
+                {acc.interestRate > 0 && <span className="badge badge-green">{acc.interestRate}% APY</span>}
               </div>
-              <p className="text-xs text-slate-500 font-medium">{stat.label}</p>
+              <p className="font-display text-2xl font-bold text-white">{balanceVisible?`$${acc.balance.toLocaleString('en-US',{minimumFractionDigits:2})}`:'••••••'}</p>
+              <p className="text-xs mt-1" style={{color:'rgba(255,255,255,0.25)'}}>{acc.isActive?'Active':'Inactive'}</p>
             </div>
-            <p className="text-lg font-bold font-display" style={{ color: '#0A1628' }}>{stat.value}</p>
-          </div>
+          );
+        })}
+
+        {/* Open new accounts */}
+        {missingTypes.map(type => {
+          const Icon = ACCOUNT_ICONS[type] || DollarSign;
+          const color = ACCOUNT_COLORS[type] || '#FF6A00';
+          return (
+            <button key={type} onClick={()=>createAccount(type)} disabled={!!creatingAccount}
+              className="card p-5 text-left transition hover:border-orange-DEFAULT group disabled:opacity-50"
+              style={{borderStyle:'dashed'}}>
+              <div className="flex items-center gap-2.5 mb-3">
+                <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{background:`${color}10`,color:'rgba(255,255,255,0.2)'}}><Icon size={16}/></div>
+                <p className="text-xs font-semibold" style={{color:'rgba(255,255,255,0.25)'}}>{type}</p>
+              </div>
+              <p className="text-sm font-semibold" style={{color:'rgba(255,255,255,0.3)'}}>
+                {creatingAccount===type?'Creating...':'+ Open Account'}
+              </p>
+              <p className="text-xs mt-1" style={{color:'rgba(255,255,255,0.15)'}}>
+                {type==='SAVINGS'?'2.5% APY':type==='INVESTMENT'?'7.0% APY':'No fees'}
+              </p>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Actions grid */}
+      <div className="grid grid-cols-3 lg:grid-cols-6 gap-3">
+        {[
+          {label:'Transfer',icon:ArrowLeftRight,href:'/dashboard/transfer',color:'#FF6A00'},
+          {label:'Zelle',icon:Zap,href:'/dashboard/payments?tab=zelle',color:'#6B3FA0'},
+          {label:'Cash App',icon:Smartphone,href:'/dashboard/payments?tab=cashapp',color:'#00D632'},
+          {label:'Loans',icon:Landmark,href:'/dashboard/loans',color:'#6366f1'},
+          {label:'Pay Bills',icon:DollarSign,href:'/dashboard/payments?tab=bills',color:'#f59e0b'},
+          {label:'Deposit',icon:Camera,href:'/dashboard/mobile-deposit',color:'#22c55e'},
+        ].map(({label,icon:Icon,href,color})=>(
+          <Link key={label} href={href} className="card flex flex-col items-center justify-center py-4 gap-2 transition hover:-translate-y-0.5 group">
+            <div className="w-9 h-9 rounded-xl flex items-center justify-center transition" style={{background:`${color}12`,color}}><Icon size={17}/></div>
+            <p className="text-xs font-medium" style={{color:'rgba(255,255,255,0.5)'}}>{label}</p>
+          </Link>
         ))}
       </div>
 
-      <div className="grid lg:grid-cols-5 gap-6">
-        {/* Chart */}
-        <div className="lg:col-span-3 bg-white rounded-2xl p-6 border border-slate-100 shadow-sm">
-          <div className="flex items-center justify-between mb-6">
+      {/* Charts */}
+      <div className="grid lg:grid-cols-5 gap-5">
+        <div className="lg:col-span-3 card p-5">
+          <div className="flex items-center justify-between mb-5">
             <div>
-              <h3 className="font-bold font-display text-lg" style={{ color: '#0A1628' }}>Balance History</h3>
-              <p className="text-slate-400 text-sm">Last 7 months</p>
+              <p className="text-xs font-semibold tracking-widest" style={{color:'rgba(255,255,255,0.2)'}}>CASH FLOW INSIGHTS</p>
+              <h3 className="font-display font-semibold text-white mt-0.5">Income vs Spending</h3>
             </div>
-            <span className="flex items-center gap-1 text-green-600 text-sm font-semibold">
-              <TrendingUp size={14} /> +12.4%
-            </span>
+            <span className="badge badge-green"><TrendingUp size={10}/>+18.4%</span>
           </div>
-          <ResponsiveContainer width="100%" height={180}>
-            <AreaChart data={chartData}>
-              <defs>
-                <linearGradient id="balanceGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#0A1628" stopOpacity={0.15} />
-                  <stop offset="95%" stopColor="#0A1628" stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <XAxis dataKey="month" tick={{ fontSize: 12, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
-              <YAxis hide />
-              <Tooltip formatter={(v) => [`$${v.toLocaleString()}`, 'Balance']}
-                contentStyle={{ background: '#0A1628', border: 'none', borderRadius: 10, color: '#fff', fontSize: 12 }} />
-              <Area type="monotone" dataKey="balance" stroke="#0A1628" strokeWidth={2.5} fill="url(#balanceGrad)" dot={false} />
-            </AreaChart>
+          <ResponsiveContainer width="100%" height={160}>
+            <BarChart data={chartData} barSize={8} barGap={4}>
+              <XAxis dataKey="m" tick={{fontSize:11,fill:'rgba(255,255,255,0.2)'}} axisLine={false} tickLine={false}/>
+              <Tooltip contentStyle={{background:'#1a1a1a',border:'1px solid rgba(255,255,255,0.08)',borderRadius:10,fontSize:12,color:'#fff'}} formatter={(v,n)=>[`$${v.toLocaleString()}`,n==='i'?'Income':'Spending']}/>
+              <Bar dataKey="i" fill="rgba(255,106,0,0.7)" radius={[4,4,0,0]}/>
+              <Bar dataKey="o" fill="rgba(239,68,68,0.4)" radius={[4,4,0,0]}/>
+            </BarChart>
           </ResponsiveContainer>
+          <div className="flex gap-4 mt-3">
+            {[{label:'Income',color:'rgba(255,106,0,0.7)'},{label:'Spending',color:'rgba(239,68,68,0.5)'}].map(l=>(
+              <div key={l.label} className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full" style={{background:l.color}}/><p className="text-xs" style={{color:'rgba(255,255,255,0.35)'}}>{l.label}</p></div>
+            ))}
+          </div>
         </div>
 
-        {/* Quick actions */}
-        <div className="lg:col-span-2 bg-white rounded-2xl p-6 border border-slate-100 shadow-sm">
-          <h3 className="font-bold font-display text-lg mb-4" style={{ color: '#0A1628' }}>Quick Actions</h3>
-          <div className="space-y-3">
-            {[
-              { label: 'Send Money', desc: 'Transfer to any account', icon: Send, href: '/dashboard/transfer', color: '#6366f1' },
-              { label: 'My Cards', desc: 'View & manage cards', icon: CreditCard, href: '/dashboard/cards', color: '#F0B429' },
-              { label: 'Deposit Funds', desc: 'Add money to wallet', icon: Plus, onClick: () => setDepositModal(true), color: '#22c55e' },
-            ].map(({ label, desc, icon: Icon, href, onClick, color }) => {
-              const content = (
-                <div className="flex items-center gap-4 p-4 rounded-xl border border-slate-100 hover:border-slate-200 hover:bg-slate-50 transition cursor-pointer group">
-                  <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: `${color}15` }}>
-                    <Icon size={18} style={{ color }} />
+        {/* Recent transactions */}
+        <div className="lg:col-span-2 card overflow-hidden">
+          <div className="flex items-center justify-between px-5 py-4" style={{borderBottom:'1px solid rgba(255,255,255,0.05)'}}>
+            <h3 className="font-display font-semibold text-white text-sm">Recent Activity</h3>
+            <Link href="/dashboard/transfer" className="text-xs font-semibold" style={{color:'#FF6A00'}}>All →</Link>
+          </div>
+          <div className="px-4 py-2">
+            {transactions.length === 0 ? (
+              <div className="py-10 text-center" style={{color:'rgba(255,255,255,0.2)'}}>
+                <ArrowLeftRight size={24} className="mx-auto mb-2 opacity-30"/><p className="text-xs">No activity yet</p>
+              </div>
+            ) : transactions.map(tx => {
+              const credit = isCredit(tx);
+              const color = txColor(tx);
+              return (
+                <div key={tx.id} className="flex items-center gap-3 py-3" style={{borderBottom:'1px solid rgba(255,255,255,0.04)'}}>
+                  <div className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0" style={{background:`${color}12`,color}}>{txIcon(tx.type)}</div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-medium truncate text-white">{tx.description||tx.type}</p>
+                    <p className="text-xs" style={{color:'rgba(255,255,255,0.25)'}}>{format(new Date(tx.createdAt),'MMM d')}</p>
                   </div>
-                  <div>
-                    <p className="font-semibold text-sm" style={{ color: '#0A1628' }}>{label}</p>
-                    <p className="text-xs text-slate-400">{desc}</p>
-                  </div>
-                  <ArrowUpRight size={14} className="ml-auto text-slate-300 group-hover:text-slate-500 transition" />
+                  <p className="text-xs font-semibold flex-shrink-0" style={{color}}>{credit?'+':'-'}${tx.amount.toFixed(2)}</p>
                 </div>
               );
-              if (href) return <Link key={label} href={href}>{content}</Link>;
-              return <div key={label} onClick={onClick}>{content}</div>;
             })}
           </div>
         </div>
       </div>
 
-      {/* Recent Transactions */}
-      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-        <div className="flex items-center justify-between px-6 py-5 border-b border-slate-100">
-          <h3 className="font-bold font-display text-lg" style={{ color: '#0A1628' }}>Recent Transactions</h3>
-          <Link href="/dashboard/transfer" className="text-sm font-medium hover:underline" style={{ color: '#F0B429' }}>View all</Link>
-        </div>
-        {transactions.length === 0 ? (
-          <div className="py-16 text-center text-slate-400">
-            <ArrowLeftRight size={32} className="mx-auto mb-3 opacity-30" />
-            <p>No transactions yet</p>
-          </div>
-        ) : (
-          <div className="divide-y divide-slate-50">
-            {transactions.map((tx) => (
-              <div key={tx.id} className="flex items-center gap-4 px-6 py-4 hover:bg-slate-50 transition">
-                <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: '#f8fafc' }}>
-                  {getTxIcon(tx)}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium text-sm text-slate-800 truncate">{tx.description || tx.type}</p>
-                  <p className="text-xs text-slate-400 mt-0.5">{format(new Date(tx.createdAt), 'MMM d, yyyy • h:mm a')}</p>
-                </div>
-                <div className="text-right">
-                  {getTxAmount(tx)}
-                  <p className="text-xs text-slate-400 mt-0.5">{tx.status}</p>
-                </div>
-                {tx.flagged && (
-                  <span className="ml-2 text-xs px-2 py-0.5 rounded-full bg-red-50 text-red-500 font-medium">⚠ Flagged</span>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {depositModal && <Modal title="Deposit Funds" onClose={() => { setDepositModal(false); setAmount(''); }} onConfirm={handleDeposit} confirmLabel="Deposit" confirmColor="#22c55e" />}
-      {withdrawModal && <Modal title="Withdraw Funds" onClose={() => { setWithdrawModal(false); setAmount(''); }} onConfirm={handleWithdraw} confirmLabel="Withdraw" confirmColor="#ef4444" />}
+      {modal && <Modal/>}
     </div>
   );
 }

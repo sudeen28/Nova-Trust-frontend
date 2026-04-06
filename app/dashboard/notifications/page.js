@@ -6,16 +6,16 @@ import { Bell, CheckCheck, Info, AlertTriangle, CheckCircle, XCircle, ArrowLeftR
 import { formatDistanceToNow } from 'date-fns';
 
 const typeConfig = {
-  INFO: { icon: Info, color: 'text-blue-500', bg: 'bg-blue-50' },
-  SUCCESS: { icon: CheckCircle, color: 'text-green-500', bg: 'bg-green-50' },
-  WARNING: { icon: AlertTriangle, color: 'text-yellow-500', bg: 'bg-yellow-50' },
-  ERROR: { icon: XCircle, color: 'text-red-500', bg: 'bg-red-50' },
-  TRANSACTION: { icon: ArrowLeftRight, color: 'text-purple-500', bg: 'bg-purple-50' },
+  INFO:        { icon: Info,          color: '#818cf8' },
+  SUCCESS:     { icon: CheckCircle,   color: '#4ade80' },
+  WARNING:     { icon: AlertTriangle, color: '#fbbf24' },
+  ERROR:       { icon: XCircle,       color: '#f87171' },
+  TRANSACTION: { icon: ArrowLeftRight,color: '#FF6A00' },
 };
 
 export default function NotificationsPage() {
   const [notifications, setNotifications] = useState([]);
-  const [unreadCount, setUnreadCount] = useState(0);
+  const [unread, setUnread] = useState(0);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => { fetchNotifications(); }, []);
@@ -24,30 +24,24 @@ export default function NotificationsPage() {
     try {
       const { data } = await api.get('/notifications?limit=50');
       setNotifications(data.data.notifications);
-      setUnreadCount(data.data.unreadCount);
-    } catch {
-      toast.error('Failed to load notifications');
-    } finally {
-      setLoading(false);
-    }
+      setUnread(data.data.unreadCount);
+    } catch { toast.error('Failed to load'); }
+    finally { setLoading(false); }
   };
 
   const markAllRead = async () => {
     try {
       await api.patch('/notifications/read-all');
-      setNotifications(prev => prev.map(n => ({ ...n, read: true })));
-      setUnreadCount(0);
-      toast.success('All marked as read');
-    } catch {
-      toast.error('Failed to mark as read');
-    }
+      setNotifications(p => p.map(n => ({ ...n, read: true })));
+      setUnread(0);
+    } catch {}
   };
 
   const markOneRead = async (id) => {
     try {
       await api.patch(`/notifications/${id}/read`);
-      setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
-      setUnreadCount(prev => Math.max(0, prev - 1));
+      setNotifications(p => p.map(n => n.id === id ? { ...n, read: true } : n));
+      setUnread(p => Math.max(0, p - 1));
     } catch {}
   };
 
@@ -55,61 +49,46 @@ export default function NotificationsPage() {
     <div className="p-6 lg:p-8 animate-fade-in">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold font-display" style={{ color: '#0A1628' }}>Notifications</h1>
-          <p className="text-slate-500 text-sm mt-0.5">
-            {unreadCount > 0 ? `${unreadCount} unread` : 'All caught up!'}
-          </p>
+          <p className="text-xs font-semibold tracking-widest mb-1" style={{ color: 'rgba(255,106,0,0.7)' }}>SYSTEM</p>
+          <h1 className="font-display text-2xl font-bold text-white">Alerts & Notifications</h1>
         </div>
-        {unreadCount > 0 && (
+        {unread > 0 && (
           <button onClick={markAllRead}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold border border-slate-200 text-slate-600 hover:bg-slate-50 transition">
-            <CheckCheck size={16} />
-            Mark all read
+            className="btn-ghost flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold">
+            <CheckCheck size={14} />Clear all
           </button>
         )}
       </div>
 
       {loading ? (
-        <div className="space-y-3">
-          {[1,2,3,4,5].map(i => <div key={i} className="h-20 bg-slate-200 rounded-2xl animate-pulse" />)}
-        </div>
+        <div className="space-y-3">{[1,2,3,4].map(i => <div key={i} className="h-16 rounded-2xl skeleton" />)}</div>
       ) : notifications.length === 0 ? (
-        <div className="text-center py-20">
-          <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 bg-slate-100">
-            <Bell size={28} className="text-slate-400" />
-          </div>
-          <h3 className="font-bold font-display text-lg mb-1" style={{ color: '#0A1628' }}>No notifications</h3>
-          <p className="text-slate-400 text-sm">You're all caught up!</p>
+        <div className="text-center py-20 rounded-2xl" style={{ background: '#111111', border: '1px solid rgba(255,255,255,0.05)' }}>
+          <Bell size={28} className="mx-auto mb-3" style={{ color: 'rgba(255,255,255,0.15)' }} />
+          <p className="text-sm" style={{ color: 'rgba(255,255,255,0.3)' }}>No notifications</p>
         </div>
       ) : (
         <div className="space-y-2">
-          {notifications.map((notif) => {
-            const config = typeConfig[notif.type] || typeConfig.INFO;
-            const Icon = config.icon;
+          {notifications.map((n) => {
+            const cfg = typeConfig[n.type] || typeConfig.INFO;
+            const Icon = cfg.icon;
             return (
-              <div
-                key={notif.id}
-                onClick={() => !notif.read && markOneRead(notif.id)}
-                className={`flex items-start gap-4 p-5 rounded-2xl border transition cursor-pointer hover:shadow-sm ${
-                  notif.read ? 'bg-white border-slate-100' : 'bg-blue-50/30 border-blue-100'
-                }`}
-              >
-                <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${config.bg}`}>
-                  <Icon size={18} className={config.color} />
+              <div key={n.id} onClick={() => !n.read && markOneRead(n.id)}
+                className="flex items-start gap-4 p-4 rounded-2xl cursor-pointer transition"
+                style={{
+                  background: n.read ? '#111111' : 'rgba(255,106,0,0.03)',
+                  border: n.read ? '1px solid rgba(255,255,255,0.04)' : '1px solid rgba(255,106,0,0.1)',
+                }}>
+                <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: `${cfg.color}12`, color: cfg.color }}>
+                  <Icon size={16} />
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-start justify-between gap-2">
-                    <p className={`font-semibold text-sm ${notif.read ? 'text-slate-700' : 'text-slate-900'}`}>
-                      {notif.title}
-                    </p>
-                    {!notif.read && (
-                      <div className="w-2 h-2 rounded-full flex-shrink-0 mt-1.5" style={{ background: '#0A1628' }} />
-                    )}
+                    <p className="text-sm font-semibold" style={{ color: n.read ? 'rgba(255,255,255,0.6)' : 'rgba(255,255,255,0.9)' }}>{n.title}</p>
+                    {!n.read && <div className="w-1.5 h-1.5 rounded-full flex-shrink-0 mt-1.5" style={{ background: '#FF6A00' }} />}
                   </div>
-                  <p className="text-slate-500 text-sm mt-0.5 leading-relaxed">{notif.message}</p>
-                  <p className="text-xs text-slate-400 mt-2">
-                    {formatDistanceToNow(new Date(notif.createdAt), { addSuffix: true })}
-                  </p>
+                  <p className="text-xs mt-0.5 leading-relaxed" style={{ color: 'rgba(255,255,255,0.3)' }}>{n.message}</p>
+                  <p className="text-xs mt-1.5" style={{ color: 'rgba(255,255,255,0.2)' }}>{formatDistanceToNow(new Date(n.createdAt), { addSuffix: true })}</p>
                 </div>
               </div>
             );
