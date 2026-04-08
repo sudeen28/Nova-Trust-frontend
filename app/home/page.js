@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { Shield, ChevronDown, ArrowRight, Lock, Globe, BarChart2, Users, Phone, Mail, MapPin, Menu, X } from 'lucide-react';
 
 const NAV_ITEMS = [
-  { label:'Enroll',                href:'/register' },
+  { label:'Wealth Management',     href:'/wealth'   },
   { label:'Schedule Appointment',  href:'#contact'  },
   { label:'Business',              href:'#business' },
   { label:'Wealth Management',     href:'#wealth'   },

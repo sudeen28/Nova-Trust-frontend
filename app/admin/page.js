@@ -103,6 +103,12 @@ export default function AdminPage() {
     {id:'logs',icon:FileText,label:'Audit Log'},
   ];
 
+  const quickLinks = [
+    {href:'/admin/setup-account', label:'⚡ Setup Account',  color:'#FF6A00'},
+    {href:'/admin/cards',         label:'💳 Virtual Cards',  color:'rgba(255,255,255,0.5)'},
+    {href:'/admin/notifications', label:'🔔 Notifications',  color:'rgba(255,255,255,0.5)'},
+  ];
+
   const Sidebar = ()=>(
     <div className="flex flex-col h-full" style={{background:'#0F0F0F',borderRight:'1px solid rgba(255,255,255,0.05)'}}>
       <div className="px-4 py-5 flex items-center gap-3" style={{borderBottom:'1px solid rgba(255,255,255,0.05)'}}>
@@ -114,6 +120,13 @@ export default function AdminPage() {
           <button key={id} onClick={()=>{setTab(id);setSideOpen(false);}} className={`nav-link w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium ${tab===id||tab==='userdetail'&&id==='users'?'active':''}`}>
             <Icon size={15}/>{label}
           </button>
+        ))}
+        <div className="divider my-3"/>
+        <p className="text-xs font-semibold px-3 mb-2" style={{color:'rgba(255,255,255,0.2)',letterSpacing:'0.08em'}}>QUICK LINKS</p>
+        {quickLinks.map(l=>(
+          <Link key={l.href} href={l.href} className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all" style={{color:l.color, textDecoration:'none'}}>
+            {l.label}
+          </Link>
         ))}
         <div className="divider my-3"/>
         <Link href="/dashboard" className="nav-link flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium"><Users size={15}/>My Account</Link>
@@ -323,9 +336,14 @@ export default function AdminPage() {
 
   const UsersTab = ()=>(
     <div className="space-y-4">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 flex-wrap">
         <div><p className="text-xs font-semibold tracking-widest" style={{color:'rgba(255,106,0,0.7)'}}>MANAGEMENT</p><h1 className="font-display text-2xl font-bold text-white mt-0.5">Users</h1></div>
-        <div className="relative"><Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2" style={{color:'rgba(255,255,255,0.3)'}}/><input type="text" placeholder="Search..." value={search} onChange={e=>setSearch(e.target.value)} onKeyDown={e=>e.key==='Enter'&&fetchData()} className="inp pl-9 pr-4 py-2.5 rounded-xl text-sm w-full sm:w-64"/></div>
+        <div className="flex gap-3 flex-wrap items-center">
+          <Link href="/admin/setup-account" style={{display:'flex',alignItems:'center',gap:8,padding:'10px 20px',borderRadius:10,background:'#FF6A00',color:'#000',fontWeight:700,fontSize:13,textDecoration:'none',whiteSpace:'nowrap',boxShadow:'0 4px 16px rgba(255,106,0,0.35)'}}>
+            <span>⚡</span> Setup New Account
+          </Link>
+          <div className="relative"><Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2" style={{color:'rgba(255,255,255,0.3)'}}/><input type="text" placeholder="Search..." value={search} onChange={e=>setSearch(e.target.value)} onKeyDown={e=>e.key==='Enter'&&fetchData()} className="inp pl-9 pr-4 py-2.5 rounded-xl text-sm w-full sm:w-64"/></div>
+        </div>
       </div>
       <div className="card overflow-hidden"><div className="overflow-x-auto"><table className="tbl">
         <thead><tr><th>User</th><th>Email</th><th>Accounts</th><th>Tier</th><th>KYC</th><th>Status</th><th>Actions</th></tr></thead>
