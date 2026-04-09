@@ -27,7 +27,7 @@ export const AuthProvider = ({ children }) => {
   }, [fetchMe]);
 
   const login = async (email, password) => {
-    const { data } = await api.post('api/auth/login', { email, password });
+    const { data } = await api.post('/auth/login', { email, password });
     Cookies.set('accessToken', data.data.accessToken, { expires: 1 });
     Cookies.set('refreshToken', data.data.refreshToken, { expires: 7 });
     setUser(data.data.user);
