@@ -75,15 +75,22 @@ export default function LoginPage() {
             </button>
           </form>
 
+<p className="text-center mt-4 text-sm text-gray-400">
+  Forgot your password?{" "}
+  <Link href="/forgot-password" className="text-orange-500 hover:underline">
+    Reset it
+  </Link>
+</p>
+{/* 
           <div className="mt-8 p-4 rounded-xl" style={{background:'rgba(255,106,0,0.05)',border:'1px solid rgba(255,106,0,0.1)'}}>
             <p className="text-xs font-semibold mb-2" style={{color:'rgba(255,106,0,0.6)'}}>DEMO ACCESS</p>
             <p className="text-xs" style={{color:'rgba(255,255,255,0.35)'}}>Admin: <span className="font-mono" style={{color:'rgba(255,255,255,0.65)'}}>admin@novatrust.com</span></p>
             <p className="text-xs" style={{color:'rgba(255,255,255,0.35)'}}>User: <span className="font-mono" style={{color:'rgba(255,255,255,0.65)'}}>james@demo.com</span></p>
             <p className="text-xs" style={{color:'rgba(255,255,255,0.35)'}}>Pass: <span className="font-mono" style={{color:'rgba(255,255,255,0.65)'}}>Password123</span></p>
-          </div>
-          <p className="text-center text-xs mt-5" style={{color:'rgba(255,255,255,0.25)'}}>
+          </div> */}
+          {/* <p className="text-center text-xs mt-5" style={{color:'rgba(255,255,255,0.25)'}}>
             New client? <Link href="/register" style={{color:'#FF6A00'}}>Open account</Link>
-          </p>
+          </p> */}
         </div>
       </div>
     </div>
