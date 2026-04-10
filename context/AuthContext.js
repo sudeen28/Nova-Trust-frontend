@@ -26,14 +26,17 @@ export const AuthProvider = ({ children }) => {
     else setLoading(false);
   }, [fetchMe]);
 
-  const login = async (email, password) => {
-    const { data } = await api.post('/auth/login', { email, password });
-    Cookies.set('accessToken', data.data.accessToken, { expires: 1 });
-    Cookies.set('refreshToken', data.data.refreshToken, { expires: 7 });
-    setUser(data.data.user);
-    return data.data.user;
-  };
+  /**
+   * Called after OTP is verified and tokens are already set in cookies.
+   * Fetches user profile to hydrate context.
+   */
+  const hydrateUser = useCallback(async () => {
+    await fetchMe();
+  }, [fetchMe]);
 
+  /**
+   * register — for new users (returns tokens directly, no OTP)
+   */
   const register = async (formData) => {
     const { data } = await api.post('/auth/register', formData);
     Cookies.set('accessToken', data.data.accessToken, { expires: 1 });
@@ -55,7 +58,7 @@ export const AuthProvider = ({ children }) => {
   const refreshUser = () => fetchMe();
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout, refreshUser }}>
+    <AuthContext.Provider value={{ user, loading, register, logout, refreshUser, hydrateUser, setUser }}>
       {children}
     </AuthContext.Provider>
   );

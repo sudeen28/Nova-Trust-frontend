@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useAuth } from '../../context/AuthContext';
 import { LayoutDashboard, ArrowLeftRight, CreditCard, User, Bell, LogOut, Shield, Settings, Menu, X, Camera, DollarSign, Landmark, ChevronRight } from 'lucide-react';
 import toast from 'react-hot-toast';
+import ChatBot from '../../components/ChatBot';
 
 const nav = [
   { href:'/dashboard',                  icon:LayoutDashboard, label:'Overview'      },
@@ -115,6 +116,7 @@ export default function DashboardLayout({ children }) {
           <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold" style={{background:'rgba(255,106,0,0.15)',color:'#FF6A00'}}>{user?.firstName?.[0]}{user?.lastName?.[0]}</div>
         </div>
         <main className="flex-1 overflow-y-auto">{children}</main>
+        <ChatBot/>
       </div>
     </div>
   );
