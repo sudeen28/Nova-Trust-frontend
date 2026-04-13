@@ -3,8 +3,9 @@ import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '../../context/AuthContext';
-import { LayoutDashboard, ArrowLeftRight, CreditCard, User, Bell, LogOut, Shield, Settings, Menu, X, Camera, DollarSign, Landmark, ChevronRight } from 'lucide-react';
+import { LayoutDashboard, ArrowLeftRight, CreditCard, User, Bell, LogOut, Shield, Settings, Menu, X, Camera, DollarSign, Landmark, ChevronRight, ShieldCheck, FileText } from 'lucide-react';
 import toast from 'react-hot-toast';
+import ThemeToggle from '../../components/ThemeToggle';
 import ChatBot from '../../components/ChatBot';
 
 const nav = [
@@ -83,6 +84,10 @@ export default function DashboardLayout({ children }) {
             <p className="text-xs truncate" style={{color:'rgba(255,255,255,0.25)'}}>{user?.tier || 'STANDARD'}</p>
           </div>
           <div className="w-2 h-2 rounded-full flex-shrink-0" style={{background:'#22c55e',boxShadow:'0 0 6px rgba(34,197,94,0.5)'}}/>
+        </div>
+        <div className="flex items-center justify-between px-1 mb-2">
+          <span className="text-xs" style={{color:'rgba(255,255,255,0.25)'}}>Theme</span>
+          <ThemeToggle/>
         </div>
         <button onClick={handleLogout} className="btn-ghost w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-medium mt-1">
           <LogOut size={14}/>Sign out

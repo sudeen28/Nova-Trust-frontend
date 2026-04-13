@@ -5,21 +5,32 @@ import Link from 'next/link';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../lib/api';
 import toast from 'react-hot-toast';
-import { Users, ArrowLeftRight, AlertTriangle, Shield, LogOut, LayoutDashboard, Camera, Landmark, Zap, Smartphone, FileText, Search, Plus, Edit2, Trash2, RotateCcw, DollarSign, ChevronDown, ChevronUp, X, Save, Check, XCircle, Menu } from 'lucide-react';
+import { Eye, EyeOff, Users, ArrowLeftRight, AlertTriangle, Shield, LogOut, LayoutDashboard, Camera, Landmark, Zap, Smartphone, FileText, Search, Plus, Edit2, Trash2, RotateCcw, DollarSign, ChevronDown, ChevronUp, X, Save, Check, XCircle, Menu, Key } from 'lucide-react';
 import { format } from 'date-fns';
-
 // ── SMALL COMPONENTS ──────────────────────────────────────────────
 const Badge = ({children,type='gray'})=><span className={`badge badge-${type}`}>{children}</span>;
 const Spinner = ()=><div className="spinner mx-auto"/>;
 
 const Modal = ({title,onClose,children,wide=false})=>(
   <div className="modal-wrap" style={{zIndex:200}}>
-    <div className="modal" style={{maxWidth:wide?680:440}}>
-      <div className="flex items-center justify-between mb-5">
+    <div style={{
+      background:'#161616',
+      border:'1px solid rgba(255,255,255,0.08)',
+      borderRadius:20,
+      width:'100%',
+      maxWidth:wide?680:440,
+      maxHeight:'90vh',
+      display:'flex',
+      flexDirection:'column',
+      overflow:'hidden',
+    }}>
+      <div className="flex items-center justify-between px-6 py-4 flex-shrink-0" style={{borderBottom:'1px solid rgba(255,255,255,0.06)'}}>
         <h3 className="font-display font-bold text-white text-base">{title}</h3>
-        <button onClick={onClose} style={{color:'rgba(255,255,255,0.3)'}} className="hover:text-white transition"><X size={18}/></button>
+        <button onClick={onClose} style={{color:'rgba(255,255,255,0.3)'}} className="hover:text-white transition p-1 rounded-lg"><X size={18}/></button>
       </div>
-      {children}
+      <div className="overflow-y-auto px-6 py-5 flex-1">
+        {children}
+      </div>
     </div>
   </div>
 );
@@ -34,7 +45,7 @@ export default function AdminPage() {
   const { user, loading, logout } = useAuth();
   const router = useRouter();
   const [tab, setTab] = useState('dashboard');
-  const [data, setData] = useState({stats:null,users:[],transactions:[],loans:[],deposits:[],fraud:[],logs:[]});
+  const [data, setData] = useState({stats:null,users:[],transactions:[],loans:[],cards:[],deposits:[],fraud:[],logs:[]});
   const [dloading, setDloading] = useState(true);
   const [search, setSearch] = useState('');
   const [txFilters, setTxFilters] = useState({type:'',status:'',startDate:'',endDate:'',minAmount:'',maxAmount:'',userId:''});
@@ -50,6 +61,8 @@ export default function AdminPage() {
   const [cashModal, setCashModal] = useState(null);
   const [loanModal, setLoanModal] = useState(null);
   const [selectedUser, setSelectedUser] = useState(null);
+  const [resetPassModal, setResetPassModal] = useState(null);
+  const [deleteConfirm, setDeleteConfirm] = useState(null);
 
   useEffect(()=>{ if(!loading&&(!user||user.role!=='ADMIN')) router.push('/login'); },[user,loading,router]);
   useEffect(()=>{ if(user?.role==='ADMIN') fetchData(); },[user,tab]);
@@ -73,6 +86,9 @@ export default function AdminPage() {
       } else if(tab==='deposits'){
         const r = await api.get('/admin/mobile-deposits');
         setData(p=>({...p,deposits:r.data.data}));
+      } else if(tab==='cards'){
+        const r = await api.get('/cards/admin/all');
+        setData(p=>({...p,cards:r.data.data}));
       } else if(tab==='fraud'){
         const r = await api.get('/admin/fraud-flags');
         setData(p=>({...p,fraud:r.data.data}));
@@ -98,6 +114,7 @@ export default function AdminPage() {
     {id:'users',icon:Users,label:'Users'},
     {id:'transactions',icon:ArrowLeftRight,label:'Transactions'},
     {id:'loans',icon:Landmark,label:'Loans'},
+    {id:'cards',icon:CreditCard,label:'Cards'},
     {id:'deposits',icon:Camera,label:'Deposits'},
     {id:'fraud',icon:AlertTriangle,label:'Fraud'},
     {id:'logs',icon:FileText,label:'Audit Log'},
@@ -272,8 +289,8 @@ export default function AdminPage() {
   };
 
   const LoanModal = ()=>{
-    const [f,setF] = useState({status:'APPROVED',amount:loanModal?.amount||'',interestRate:loanModal?.interestRate||8.5,termMonths:loanModal?.termMonths||12,rejectionReason:''});
-    const save = ()=>action(()=>api.patch(`/admin/loans/${loanModal.id}/review`,f),`Loan ${f.status.toLowerCase()}`).then(()=>setLoanModal(null));
+    const [f,setF] = useState({status:'APPROVED',amount:loanModal?.amount||'',interestRate:loanModal?.interestRate||8.5,termMonths:loanModal?.termMonths||12,rejectionReason:'',approvedAt:'',collectedAt:''});
+    const save = ()=>action(()=>api.patch(`/admin/loans/${loanModal.id}/review`,{...f,disbursedAt:f.disbursedAt||undefined,collectedAt:f.collectedAt||undefined}),`Loan ${f.status.toLowerCase()}`).then(()=>setLoanModal(null));
     return (
       <Modal title="Review Loan" onClose={()=>setLoanModal(null)}>
         <div className="p-3 rounded-xl mb-4" style={{background:'rgba(255,255,255,0.03)',border:'1px solid rgba(255,255,255,0.06)'}}>
@@ -288,11 +305,65 @@ export default function AdminPage() {
               <div><label className={lc} style={ls}>RATE %</label><input type="number" step="0.1" value={f.interestRate} onChange={e=>setF({...f,interestRate:e.target.value})} className={ic}/></div>
               <div><label className={lc} style={ls}>MONTHS</label><input type="number" value={f.termMonths} onChange={e=>setF({...f,termMonths:e.target.value})} className={ic}/></div>
             </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div><label className={lc} style={ls}>APPROVAL DATE</label><input type="datetime-local" value={f.approvedAt||''} onChange={e=>setF({...f,approvedAt:e.target.value})} className={ic}/><p className="text-xs mt-1" style={{color:'rgba(255,255,255,0.2)'}}>When loan was approved</p></div>
+              <div><label className={lc} style={ls}>COLLECTED DATE</label><input type="datetime-local" value={f.collectedAt||''} onChange={e=>setF({...f,collectedAt:e.target.value})} className={ic}/><p className="text-xs mt-1" style={{color:'rgba(255,255,255,0.2)'}}>When funds were disbursed</p></div>
+            </div>
           </>}
           {f.status==='REJECTED'&&<div><label className={lc} style={ls}>REASON</label><input type="text" value={f.rejectionReason} onChange={e=>setF({...f,rejectionReason:e.target.value})} className={ic} placeholder="Reason for rejection"/></div>}
         </div>
         <div className="flex gap-3"><button onClick={()=>setLoanModal(null)} className="btn-ghost flex-1 py-2.5 rounded-xl text-sm">Cancel</button><button onClick={save} className={`flex-1 py-2.5 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 ${f.status==='APPROVED'?'btn-primary':' btn-danger'}`}>{f.status==='APPROVED'?<Check size={13}/>:<XCircle size={13}/>}{f.status==='APPROVED'?'Approve':'Reject'}</button></div>
       </Modal>
+    );
+  };
+
+  const ResetPasswordModal = ({user, onClose, onDone}) => {
+    const [pass, setPass] = useState('');
+    const [loading, setLoading] = useState(false);
+    const submit = async() => {
+      if (pass.length < 8) return toast.error('Min 8 characters');
+      setLoading(true);
+      try { await api.patch(`/admin/users/${user.id}/reset-password`,{newPassword:pass}); toast.success('Password reset!'); onDone(); }
+      catch(err) { toast.error(err.response?.data?.message||'Failed'); }
+      finally { setLoading(false); }
+    };
+    return (
+      <div className="modal-wrap" style={{zIndex:200}}>
+        <div className="modal" style={{maxWidth:380}}>
+          <div className="flex items-center justify-between mb-4"><h3 className="font-display font-bold text-white text-base">Reset Password</h3><button onClick={onClose} style={{color:'rgba(255,255,255,0.3)'}}><X size={18}/></button></div>
+          <p className="text-sm mb-4" style={{color:'rgba(255,255,255,0.4)'}}>Set new password for <strong className="text-white">{user.firstName} {user.lastName}</strong></p>
+          <label className={lc} style={ls}>NEW PASSWORD</label>
+          <input type="password" value={pass} onChange={e=>setPass(e.target.value)} className={ic} placeholder="Min 8 characters" style={{marginBottom:16}}/>
+          <div className="flex gap-3">
+            <button onClick={onClose} className="btn-ghost flex-1 py-2.5 rounded-xl text-sm">Cancel</button>
+            <button onClick={submit} disabled={loading} className="btn-primary flex-1 py-2.5 rounded-xl text-sm">{loading?'Saving...':'Reset Password'}</button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const DeleteUserModal = ({user, onClose, onDone}) => {
+    const [loading, setLoading] = useState(false);
+    const confirm = async() => {
+      setLoading(true);
+      try { await api.delete(`/admin/users/${user.id}`); toast.success('User deleted'); onDone(); }
+      catch(err) { toast.error(err.response?.data?.message||'Failed'); }
+      finally { setLoading(false); }
+    };
+    return (
+      <div className="modal-wrap" style={{zIndex:200}}>
+        <div className="modal" style={{maxWidth:380}}>
+          <div className="flex items-center justify-between mb-4"><h3 className="font-display font-bold text-white text-base">Delete User</h3><button onClick={onClose} style={{color:'rgba(255,255,255,0.3)'}}><X size={18}/></button></div>
+          <div className="mb-4 p-3 rounded-xl" style={{background:'rgba(239,68,68,0.08)',border:'1px solid rgba(239,68,68,0.2)'}}>
+            <p className="text-sm" style={{color:'#f87171'}}>⚠️ This will permanently delete <strong>{user.firstName} {user.lastName}</strong> and all their data including accounts, transactions, cards, and loans. This cannot be undone.</p>
+          </div>
+          <div className="flex gap-3">
+            <button onClick={onClose} className="btn-ghost flex-1 py-2.5 rounded-xl text-sm">Cancel</button>
+            <button onClick={confirm} disabled={loading} className="flex-1 py-2.5 rounded-xl text-sm font-semibold" style={{background:'rgba(239,68,68,0.15)',color:'#f87171',border:'1px solid rgba(239,68,68,0.2)'}}>{loading?'Deleting...':'Yes, Delete User'}</button>
+          </div>
+        </div>
+      </div>
     );
   };
 
@@ -363,6 +434,8 @@ export default function AdminPage() {
                   <button onClick={()=>setEditUser(u)} className="p-1.5 rounded-lg transition" style={{background:'rgba(255,255,255,0.05)',color:'rgba(255,255,255,0.5)'}} title="Edit"><Edit2 size={12}/></button>
                   <button onClick={()=>setBalanceModal({userId:u.id,name:`${u.firstName} ${u.lastName}`,balance:u.accounts?.[0]?.balance||0,accountId:u.accounts?.[0]?.id||'',accounts:u.accounts})} className="p-1.5 rounded-lg transition" style={{background:'rgba(255,106,0,0.1)',color:'#FF6A00'}} title="Balance"><DollarSign size={12}/></button>
                   <button onClick={()=>action(()=>api.patch(`/admin/users/${u.id}/status`,{status:u.status==='ACTIVE'?'FROZEN':'ACTIVE'}),u.status==='ACTIVE'?'Frozen':'Activated')} className="p-1.5 rounded-lg transition" style={{background:'rgba(99,102,241,0.1)',color:'#818cf8'}} title="Freeze/Unfreeze">{u.status==='ACTIVE'?<XCircle size={12}/>:<Check size={12}/>}</button>
+                  <button onClick={()=>setResetPassModal(u)} className="p-1.5 rounded-lg transition" style={{background:'rgba(251,191,36,0.1)',color:'#fbbf24'}} title="Reset Password"><Key size={12}/></button>
+                  <button onClick={()=>setDeleteConfirm(u)} className="p-1.5 rounded-lg transition" style={{background:'rgba(239,68,68,0.1)',color:'#f87171'}} title="Delete User"><Trash2 size={12}/></button>
                 </div>
               </td>
             </tr>
@@ -665,7 +738,74 @@ export default function AdminPage() {
     );
   };
 
-  const tabContent = {dashboard:<Dashboard/>,users:<UsersTab/>,transactions:<TxTab/>,loans:<LoansTab/>,deposits:<DepositsTab/>,fraud:<FraudTab/>,logs:<LogsTab/>,userdetail:<UserDetailTab/>};
+  // ── RESET PASSWORD MODAL ──────────────────────────────────────────
+  const ResetPassModal = ()=>{
+    const [newPass, setNewPass] = useState('');
+    const [show, setShow] = useState(false);
+    const save = async()=>{
+      if(!newPass||newPass.length<8) return toast.error('Min 8 characters');
+      try { await api.patch(`/admin/users/${resetPassModal.id}/reset-password`,{newPassword:newPass}); toast.success('Password reset successfully'); setResetPassModal(null); }
+      catch(err){ toast.error(err.response?.data?.message||'Failed'); }
+    };
+    return (
+      <Modal title="Reset User Password" onClose={()=>setResetPassModal(null)}>
+        <p className="text-xs mb-4" style={{color:'rgba(255,255,255,0.4)'}}>{resetPassModal?.firstName} {resetPassModal?.lastName} · {resetPassModal?.email}</p>
+        <div className="mb-5">
+          <label className={lc} style={ls}>NEW PASSWORD</label>
+          <div className="relative">
+            <input type={show?'text':'password'} value={newPass} onChange={e=>setNewPass(e.target.value)} className={ic} placeholder="Min 8 characters"/>
+            <button type="button" onClick={()=>setShow(!show)} style={{position:'absolute',right:10,top:'50%',transform:'translateY(-50%)',background:'none',border:'none',cursor:'pointer',color:'rgba(255,255,255,0.3)'}}>{show?<EyeOff size={14}/>:<Eye size={14}/>}</button>
+          </div>
+        </div>
+        <div className="flex gap-3">
+          <button onClick={()=>setResetPassModal(null)} className="btn-ghost flex-1 py-2.5 rounded-xl text-sm">Cancel</button>
+          <button onClick={save} className="btn-primary flex-1 py-2.5 rounded-xl text-sm">Reset Password</button>
+        </div>
+      </Modal>
+    );
+  };
+
+
+  const CardsTab = ()=>{
+    const approveCard = (id) => action(() => api.patch(`/cards/admin/${id}/approve`), 'Card approved!');
+    const rejectCard = async (id) => {
+      const reason = prompt('Rejection reason:');
+      if (reason === null) return;
+      action(() => api.patch(`/cards/admin/${id}/reject`, { reason }), 'Card rejected');
+    };
+    const statusBadge = (s) => {
+      const map = { PENDING:'badge-yellow', ACTIVE:'badge-green', FROZEN:'badge-blue', REJECTED:'badge-red', CANCELLED:'badge-gray' };
+      return <Badge type={map[s]||'gray'}>{s}</Badge>;
+    };
+    return (
+      <div className="space-y-4">
+        <div><p className="text-xs font-semibold tracking-widest" style={{color:'rgba(255,106,0,0.7)'}}>CARDS</p><h1 className="font-display text-2xl font-bold text-white mt-0.5">Card Applications</h1></div>
+        <div className="card overflow-hidden"><div className="overflow-x-auto"><table className="tbl">
+          <thead><tr><th>Client</th><th>Type</th><th>Network</th><th>Account</th><th>Status</th><th>Applied</th><th>Actions</th></tr></thead>
+          <tbody>
+            {dloading?<tr><td colSpan={7} className="text-center py-8" style={{color:'rgba(255,255,255,0.2)'}}>Loading...</td></tr>
+            :(data.cards||[]).length===0?<tr><td colSpan={7} className="text-center py-8" style={{color:'rgba(255,255,255,0.2)'}}>No card applications</td></tr>
+            :(data.cards||[]).map(c=>(
+              <tr key={c.id}>
+                <td><p className="text-xs font-semibold text-white">{c.account?.user?.firstName} {c.account?.user?.lastName}</p><p style={{fontSize:11,color:'rgba(255,255,255,0.3)'}}>{c.account?.user?.email}</p></td>
+                <td><Badge type="gray">{c.type}</Badge></td>
+                <td style={{color:'rgba(255,255,255,0.5)',fontSize:12}}>{c.network}</td>
+                <td style={{fontSize:11,color:'rgba(255,255,255,0.3)',fontFamily:'monospace'}}>{c.account?.accountNumber}</td>
+                <td>{statusBadge(c.status)}</td>
+                <td style={{fontSize:11,color:'rgba(255,255,255,0.3)',whiteSpace:'nowrap'}}>{format(new Date(c.createdAt),'MMM d, yyyy')}</td>
+                <td>{c.status==='PENDING'&&<div className="flex gap-2">
+                  <button onClick={()=>approveCard(c.id)} className="px-3 py-1.5 rounded-lg text-xs font-semibold" style={{background:'rgba(34,197,94,0.12)',color:'#4ade80',border:'1px solid rgba(34,197,94,0.2)'}}>Approve</button>
+                  <button onClick={()=>rejectCard(c.id)} className="px-3 py-1.5 rounded-lg text-xs font-semibold" style={{background:'rgba(239,68,68,0.1)',color:'#f87171',border:'1px solid rgba(239,68,68,0.15)'}}>Reject</button>
+                </div>}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table></div></div>
+      </div>
+    );
+  };
+
+  const tabContent = {dashboard:<Dashboard/>,users:<UsersTab/>,transactions:<TxTab/>,loans:<LoansTab/>,cards:<CardsTab/>,deposits:<DepositsTab/>,fraud:<FraudTab/>,logs:<LogsTab/>,userdetail:<UserDetailTab/>};
 
   return (
     <div className="flex h-screen" style={{background:'#0B0B0B'}}>
@@ -693,6 +833,12 @@ export default function AdminPage() {
 
       {/* Modals */}
       {editUser&&<EditUserModal/>}
+      {resetPassModal&&(
+        <ResetPasswordModal user={resetPassModal} onClose={()=>setResetPassModal(null)} onDone={()=>{setResetPassModal(null);fetchData();}}/>
+      )}
+      {deleteConfirm&&(
+        <DeleteUserModal user={deleteConfirm} onClose={()=>setDeleteConfirm(null)} onDone={()=>{setDeleteConfirm(null);fetchData();}}/>
+      )}
       {balanceModal&&<BalanceModal/>}
       {addTxModal&&<AddTxModal/>}
       {editTxModal&&<EditTxModal/>}
@@ -700,6 +846,7 @@ export default function AdminPage() {
       {cashModal&&<CashModal/>}
       {loanModal&&<LoanModal/>}
       {createAccModal&&<CreateAccModal/>}
+      {resetPassModal&&<ResetPassModal/>}
     </div>
   );
 }

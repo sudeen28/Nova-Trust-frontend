@@ -144,11 +144,19 @@ export default function DashboardPage() {
   return (
     <div className="p-5 lg:p-7 space-y-5 anim-up">
 
-      {/* Header */}
+      {/* Header with time-based greeting */}
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-xs font-semibold tracking-widest" style={{color:'rgba(255,106,0,0.7)'}}>PRIVATE PORTFOLIO</p>
-          <h1 className="font-display text-2xl font-bold text-white mt-0.5">Account Overview</h1>
+          <p className="text-xs font-semibold tracking-widest" style={{color:'rgba(255,106,0,0.7)'}}>
+            {(() => {
+              const h = new Date().getHours();
+              if (h >= 5 && h < 12) return 'GOOD MORNING';
+              if (h >= 12 && h < 17) return 'GOOD AFTERNOON';
+              if (h >= 17 && h < 21) return 'GOOD EVENING';
+              return 'GOOD NIGHT';
+            })()}, {user?.firstName?.toUpperCase()}
+          </p>
+          <h1 className="font-display text-2xl font-bold mt-0.5" style={{color:"var(--t1)"}}>Account Overview</h1>
         </div>
         <button onClick={fetchData} className="btn-ghost p-2.5 rounded-xl"><RefreshCw size={15}/></button>
       </div>

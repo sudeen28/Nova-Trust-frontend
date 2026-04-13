@@ -6,12 +6,14 @@ import toast from 'react-hot-toast';
 import { Send, Search, ArrowDownLeft, ArrowUpRight, ArrowLeftRight, ChevronLeft, ChevronRight } from 'lucide-react';
 import { format } from 'date-fns';
 
-const TYPES = ['ALL', 'TRANSFER', 'DEPOSIT', 'WITHDRAWAL'];
-const STATUSES = ['ALL', 'COMPLETED', 'PENDING', 'FAILED', 'REVERSED'];
+const TYPES    = ['ALL','TRANSFER','DEPOSIT','WITHDRAWAL','ZELLE','CASHAPP','BILL_PAYMENT'];
+const STATUSES = ['ALL','COMPLETED','PENDING','FAILED','REVERSED'];
 
 export default function TransferPage() {
   const { user } = useAuth();
   const [tab, setTab] = useState('send');
+  const [hasPin, setHasPin] = useState(false);
+  const [pinInput, setPinInput] = useState('');
   const [form, setForm] = useState({ recipientAccountNumber: '', amount: '', description: '' });
   const [loading, setLoading] = useState(false);
   const [transactions, setTransactions] = useState([]);
@@ -33,7 +35,10 @@ export default function TransferPage() {
     finally { setTxLoading(false); }
   }, [filters]);
 
-  useEffect(() => { fetchTransactions(); }, [fetchTransactions]);
+  useEffect(() => {
+    fetchTransactions();
+    api.get('/security/pin/status').then(r => setHasPin(r.data.data.hasPin)).catch(() => {});
+  }, [fetchTransactions]);
 
   const handleSend = async (e) => {
     e.preventDefault();
@@ -43,161 +48,184 @@ export default function TransferPage() {
         recipientAccountNumber: form.recipientAccountNumber,
         amount: parseFloat(form.amount),
         description: form.description,
+        transactionPin: hasPin ? pinInput : undefined,
       });
       toast.success('Transfer completed');
       setForm({ recipientAccountNumber: '', amount: '', description: '' });
+      setPinInput('');
       fetchTransactions();
       setTab('history');
     } catch (err) { toast.error(err.response?.data?.message || 'Transfer failed'); }
     finally { setLoading(false); }
   };
 
-  const isCredit = (tx) => tx.toAccount?.userId === user?.id || tx.type === 'DEPOSIT';
-  const getColor = (tx) => isCredit(tx) ? '#4ade80' : '#f87171';
+  const isCredit = (tx) => tx.toAccount?.userId === user?.id || tx.type === 'DEPOSIT' || tx.type === 'LOAN_DISBURSEMENT';
+
+  const TYPE_LABELS = { TRANSFER:'Transfer', DEPOSIT:'Deposit', WITHDRAWAL:'Withdrawal', ZELLE:'Zelle', CASHAPP:'Cash App', BILL_PAYMENT:'Bill', LOAN_DISBURSEMENT:'Loan', LOAN_REPAYMENT:'Loan Repay', MOBILE_DEPOSIT:'Cheque' };
 
   return (
-    <div className="p-6 lg:p-8 animate-fade-in">
-      <p className="text-xs font-semibold tracking-widest mb-1" style={{ color: 'rgba(255,106,0,0.7)' }}>TRANSACTIONS</p>
-      <h1 className="font-display text-2xl font-bold text-white mb-6">Transfers & History</h1>
+    <div className="p-5 lg:p-7 anim-up">
+      <p className="text-xs font-semibold tracking-widest" style={{ color: 'rgba(255,106,0,0.7)' }}>TRANSACTIONS</p>
+      <h1 className="font-display text-2xl font-bold mb-5 mt-0.5" style={{ color: 'var(--t1)' }}>Transfers & History</h1>
 
-      {/* Tabs */}
-      <div className="flex gap-1 mb-6 rounded-xl p-1 w-fit" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}>
-        {['send', 'history'].map((t) => (
-          <button key={t} onClick={() => setTab(t)}
-            className="px-5 py-2 rounded-lg text-xs font-semibold transition-all capitalize"
-            style={tab === t ? { background: 'rgba(255,106,0,0.15)', color: '#FF6A00', border: '1px solid rgba(255,106,0,0.2)' } : { color: 'rgba(255,255,255,0.35)' }}>
-            {t === 'send' ? '↗ Send Money' : '≡ History'}
+      {/* Tab bar */}
+      <div className="tab-bar mb-6">
+        {[{ id:'send', label:'↗ Send Money' }, { id:'history', label:'≡ History' }].map(t => (
+          <button key={t.id} onClick={() => setTab(t.id)} className={`tab-item ${tab === t.id ? 'active' : ''}`}>
+            {t.label}
           </button>
         ))}
       </div>
 
+      {/* ── SEND FORM ── */}
       {tab === 'send' && (
         <div className="max-w-md">
-          <div className="rounded-2xl p-6" style={{ background: '#111111', border: '1px solid rgba(255,255,255,0.06)' }}>
+          <div className="card p-6">
             <div className="flex items-center gap-3 mb-6">
-              <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: 'rgba(255,106,0,0.1)', color: '#FF6A00' }}>
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: 'var(--orangeD)', color: 'var(--orange)' }}>
                 <Send size={18} />
               </div>
               <div>
-                <h2 className="font-display font-semibold text-white">Wire Transfer</h2>
-                <p className="text-xs" style={{ color: 'rgba(255,255,255,0.3)' }}>Instant internal transfer</p>
+                <h2 className="font-display font-semibold" style={{ color: 'var(--t1)' }}>Wire Transfer</h2>
+                <p className="text-xs" style={{ color: 'var(--t3)' }}>Instant internal transfer</p>
               </div>
             </div>
 
             <form onSubmit={handleSend} className="space-y-4">
               <div>
-                <label className="block text-xs font-semibold tracking-wide mb-1.5" style={{ color: 'rgba(255,255,255,0.35)' }}>RECIPIENT ACCOUNT</label>
+                <label className="block text-xs font-semibold tracking-widest mb-1.5" style={{ color: 'var(--t3)' }}>RECIPIENT ACCOUNT</label>
                 <input type="text" value={form.recipientAccountNumber}
-                  onChange={(e) => setForm({ ...form, recipientAccountNumber: e.target.value })}
-                  className="elite-input w-full px-4 py-3 rounded-xl text-sm font-mono"
+                  onChange={e => setForm({ ...form, recipientAccountNumber: e.target.value })}
+                  className="inp px-4 py-3 rounded-xl text-sm font-mono"
                   placeholder="Account number" required />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold tracking-wide mb-1.5" style={{ color: 'rgba(255,255,255,0.35)' }}>AMOUNT (USD)</label>
+                <label className="block text-xs font-semibold tracking-widest mb-1.5" style={{ color: 'var(--t3)' }}>AMOUNT (USD)</label>
                 <div className="relative">
-                  <span className="absolute left-4 top-1/2 -translate-y-1/2 font-bold text-xl" style={{ color: 'rgba(255,255,255,0.2)' }}>$</span>
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-xl font-bold" style={{ color: 'var(--t3)' }}>$</span>
                   <input type="number" min="0.01" step="0.01" value={form.amount}
-                    onChange={(e) => setForm({ ...form, amount: e.target.value })}
-                    className="elite-input w-full pl-9 pr-4 py-3 rounded-xl text-2xl font-bold"
+                    onChange={e => setForm({ ...form, amount: e.target.value })}
+                    className="inp pl-9 pr-4 py-3 rounded-xl text-2xl font-bold"
                     placeholder="0.00" required />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold tracking-wide mb-1.5" style={{ color: 'rgba(255,255,255,0.35)' }}>REFERENCE (OPTIONAL)</label>
+                <label className="block text-xs font-semibold tracking-widest mb-1.5" style={{ color: 'var(--t3)' }}>REFERENCE (OPTIONAL)</label>
                 <input type="text" value={form.description}
-                  onChange={(e) => setForm({ ...form, description: e.target.value })}
-                  className="elite-input w-full px-4 py-3 rounded-xl text-sm"
+                  onChange={e => setForm({ ...form, description: e.target.value })}
+                  className="inp px-4 py-3 rounded-xl text-sm"
                   placeholder="e.g. Invoice payment" />
               </div>
 
-              <button type="submit" disabled={loading} className="btn-primary w-full py-3.5 rounded-xl text-sm flex items-center justify-center gap-2 mt-2">
-                {loading ? <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin" /> : <><Send size={15} /><span>Execute Transfer</span></>}
+              {hasPin && (
+                <div>
+                  <label className="block text-xs font-semibold tracking-widest mb-1.5" style={{ color: 'var(--t3)' }}>TRANSACTION PIN</label>
+                  <input type="password" inputMode="numeric" maxLength={4} value={pinInput}
+                    onChange={e => setPinInput(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                    className="inp px-4 py-3 rounded-xl text-2xl font-bold text-center tracking-[0.5em] font-mono"
+                    placeholder="••••" required />
+                </div>
+              )}
+
+              <button type="submit" disabled={loading}
+                className="btn-primary w-full py-3.5 rounded-xl text-sm flex items-center justify-center gap-2">
+                {loading ? <div className="spinner" /> : <><Send size={15} /><span>Execute Transfer</span></>}
               </button>
             </form>
-
-            <div className="mt-4 p-3 rounded-xl text-xs" style={{ background: 'rgba(255,106,0,0.05)', border: '1px solid rgba(255,106,0,0.1)', color: 'rgba(255,106,0,0.6)' }}>
-              💡 Test: use account number <span className="font-mono">485700000001</span>
-            </div>
           </div>
         </div>
       )}
 
+      {/* ── HISTORY ── */}
       {tab === 'history' && (
         <div className="space-y-4">
           {/* Filters */}
-          <div className="rounded-2xl p-4" style={{ background: '#111111', border: '1px solid rgba(255,255,255,0.05)' }}>
+          <div className="card p-4">
             <div className="flex flex-wrap gap-3">
               <div className="relative flex-1 min-w-48">
-                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'rgba(255,255,255,0.2)' }} />
-                <input type="text" placeholder="Search..." value={filters.search}
-                  onChange={(e) => setFilters({ ...filters, search: e.target.value })}
-                  className="elite-input w-full pl-9 pr-4 py-2.5 rounded-xl text-xs" />
+                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--t3)' }} />
+                <input type="text" placeholder="Search transactions..." value={filters.search}
+                  onChange={e => setFilters({ ...filters, search: e.target.value })}
+                  className="inp pl-9 pr-4 py-2.5 rounded-xl text-sm" />
               </div>
-              {[{ key: 'type', opts: TYPES }, { key: 'status', opts: STATUSES }].map(({ key, opts }) => (
-                <select key={key} value={filters[key]} onChange={(e) => setFilters({ ...filters, [key]: e.target.value })}
-                  className="elite-input select-input px-3 py-2.5 rounded-xl text-xs">
-                  {opts.map(o => <option key={o}>{o}</option>)}
-                </select>
-              ))}
+              <select value={filters.type} onChange={e => setFilters({ ...filters, type: e.target.value })}
+                className="inp px-3 py-2.5 rounded-xl text-sm" style={{ width: 'auto' }}>
+                {TYPES.map(t => <option key={t} value={t}>{t === 'ALL' ? 'All Types' : t}</option>)}
+              </select>
+              <select value={filters.status} onChange={e => setFilters({ ...filters, status: e.target.value })}
+                className="inp px-3 py-2.5 rounded-xl text-sm" style={{ width: 'auto' }}>
+                {STATUSES.map(s => <option key={s} value={s}>{s === 'ALL' ? 'All Status' : s}</option>)}
+              </select>
             </div>
           </div>
 
           {/* Table */}
-          <div className="rounded-2xl overflow-hidden" style={{ background: '#111111', border: '1px solid rgba(255,255,255,0.05)' }}>
-            <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-              <p className="font-display font-semibold text-white text-sm">All Transactions</p>
-              <span className="text-xs" style={{ color: 'rgba(255,255,255,0.25)' }}>{pagination.total} records</span>
+          <div className="card overflow-hidden">
+            <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: '1px solid var(--border)' }}>
+              <p className="font-display font-semibold text-sm" style={{ color: 'var(--t1)' }}>All Transactions</p>
+              <span className="badge badge-gray">{pagination.total} records</span>
             </div>
 
             {txLoading ? (
-              <div className="p-5 space-y-3">{[1,2,3,4,5].map(i => <div key={i} className="h-12 rounded-xl skeleton" />)}</div>
+              <div className="p-5 space-y-3">{[1,2,3,4,5].map(i => <div key={i} className="skeleton h-12" />)}</div>
             ) : transactions.length === 0 ? (
-              <div className="py-14 text-center" style={{ color: 'rgba(255,255,255,0.2)' }}>
+              <div className="py-14 text-center" style={{ color: 'var(--t3)' }}>
                 <ArrowLeftRight size={28} className="mx-auto mb-3 opacity-30" />
                 <p className="text-sm">No transactions found</p>
               </div>
             ) : (
               <>
-                <div className="px-5">
-                  {transactions.map((tx) => {
-                    const credit = isCredit(tx);
-                    const color = getColor(tx);
-                    return (
-                      <div key={tx.id} className="flex items-center gap-4 py-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
-                        <div className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: `${color}12`, color }}>
-                          {tx.type === 'DEPOSIT' ? <ArrowDownLeft size={13} /> : tx.type === 'WITHDRAWAL' ? <ArrowUpRight size={13} /> : credit ? <ArrowDownLeft size={13} /> : <ArrowUpRight size={13} />}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium truncate" style={{ color: 'rgba(255,255,255,0.8)' }}>{tx.description || tx.type}</p>
-                          <p className="text-xs mt-0.5" style={{ color: 'rgba(255,255,255,0.25)' }}>{format(new Date(tx.createdAt), 'MMM d, yyyy')}</p>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-sm font-semibold" style={{ color }}>{credit ? '+' : '-'}${tx.amount.toFixed(2)}</p>
-                          <span className="text-xs px-2 py-0.5 rounded-full" style={{
-                            background: tx.status === 'COMPLETED' ? 'rgba(74,222,128,0.1)' : tx.status === 'REVERSED' ? 'rgba(129,140,248,0.1)' : 'rgba(251,191,36,0.1)',
-                            color: tx.status === 'COMPLETED' ? '#4ade80' : tx.status === 'REVERSED' ? '#818cf8' : '#fbbf24'
-                          }}>{tx.status}</span>
-                        </div>
-                      </div>
-                    );
-                  })}
+                <div className="overflow-x-auto">
+                  <table className="tbl">
+                    <thead>
+                      <tr>
+                        <th>Date</th>
+                        <th>Type</th>
+                        <th>Description</th>
+                        <th>Amount</th>
+                        <th>Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {transactions.map(tx => {
+                        const credit = isCredit(tx);
+                        const color = credit ? '#22c55e' : '#ef4444';
+                        return (
+                          <tr key={tx.id}>
+                            <td style={{ color: 'var(--t3)', fontSize: 12, whiteSpace: 'nowrap' }}>
+                              {format(new Date(tx.createdAt), 'MMM d, HH:mm')}
+                            </td>
+                            <td>
+                              <span className="badge badge-gray">{TYPE_LABELS[tx.type] || tx.type}</span>
+                            </td>
+                            <td style={{ color: 'var(--t2)', fontSize: 13 }}>
+                              {tx.description || '—'}
+                            </td>
+                            <td>
+                              <span className="font-semibold" style={{ color }}>{credit ? '+' : '-'}${tx.amount.toFixed(2)}</span>
+                            </td>
+                            <td>
+                              <span className={`badge ${tx.status === 'COMPLETED' ? 'badge-green' : tx.status === 'REVERSED' ? 'badge-blue' : tx.status === 'FAILED' ? 'badge-red' : 'badge-yellow'}`}>
+                                {tx.status}
+                              </span>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
                 </div>
 
                 {pagination.totalPages > 1 && (
-                  <div className="flex items-center justify-between px-5 py-4" style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
-                    <p className="text-xs" style={{ color: 'rgba(255,255,255,0.25)' }}>Page {pagination.page} of {pagination.totalPages}</p>
+                  <div className="flex items-center justify-between px-5 py-4" style={{ borderTop: '1px solid var(--border)' }}>
+                    <p className="text-xs" style={{ color: 'var(--t3)' }}>Page {pagination.page} of {pagination.totalPages}</p>
                     <div className="flex gap-2">
-                      {[{ icon: ChevronLeft, action: () => fetchTransactions(pagination.page - 1), disabled: pagination.page === 1 },
-                        { icon: ChevronRight, action: () => fetchTransactions(pagination.page + 1), disabled: pagination.page === pagination.totalPages }
-                      ].map(({ icon: Icon, action, disabled }, i) => (
-                        <button key={i} onClick={action} disabled={disabled}
-                          className="p-2 rounded-lg transition disabled:opacity-30"
-                          style={{ background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.5)', border: '1px solid rgba(255,255,255,0.06)' }}>
-                          <Icon size={14} />
-                        </button>
-                      ))}
+                      <button onClick={() => fetchTransactions(pagination.page - 1)} disabled={pagination.page === 1}
+                        className="btn-ghost p-2 rounded-lg disabled:opacity-30"><ChevronLeft size={14} /></button>
+                      <button onClick={() => fetchTransactions(pagination.page + 1)} disabled={pagination.page === pagination.totalPages}
+                        className="btn-ghost p-2 rounded-lg disabled:opacity-30"><ChevronRight size={14} /></button>
                     </div>
                   </div>
                 )}
