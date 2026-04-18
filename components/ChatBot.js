@@ -202,7 +202,7 @@ export default function ChatBot() {
                     <Send size={14} color="#000" />
                   </button>
                 </div>
-                <p className="text-xs text-center mt-2" style={{ color: 'rgba(255,255,255,0.15)' }}>Powered by Claude AI</p>
+                
               </div>
             </>
           )}

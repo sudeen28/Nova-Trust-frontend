@@ -5,8 +5,9 @@ import Link from 'next/link';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../lib/api';
 import toast from 'react-hot-toast';
-import { Eye, EyeOff, Users, ArrowLeftRight, AlertTriangle, Shield, LogOut, LayoutDashboard, Camera, Landmark, Zap, Smartphone, FileText, Search, Plus, Edit2, Trash2, RotateCcw, DollarSign, ChevronDown, ChevronUp, X, Save, Check, XCircle, Menu, Key } from 'lucide-react';
+import { Eye, EyeOff, Users, ArrowLeftRight, AlertTriangle, Shield, LogOut, LayoutDashboard, Camera, Landmark, Zap, Smartphone, FileText, Search, Plus, Edit2, Trash2, RotateCcw, DollarSign, X, Save, Check, XCircle, Menu, Key, CreditCard } from 'lucide-react';
 import { format } from 'date-fns';
+
 // ── SMALL COMPONENTS ──────────────────────────────────────────────
 const Badge = ({children,type='gray'})=><span className={`badge badge-${type}`}>{children}</span>;
 const Spinner = ()=><div className="spinner mx-auto"/>;
@@ -14,8 +15,8 @@ const Spinner = ()=><div className="spinner mx-auto"/>;
 const Modal = ({title,onClose,children,wide=false})=>(
   <div className="modal-wrap" style={{zIndex:200}}>
     <div style={{
-      background:'#161616',
-      border:'1px solid rgba(255,255,255,0.08)',
+      background:'var(--s2)',
+      border:'1px solid var(--border)',
       borderRadius:20,
       width:'100%',
       maxWidth:wide?680:440,
@@ -24,9 +25,9 @@ const Modal = ({title,onClose,children,wide=false})=>(
       flexDirection:'column',
       overflow:'hidden',
     }}>
-      <div className="flex items-center justify-between px-6 py-4 flex-shrink-0" style={{borderBottom:'1px solid rgba(255,255,255,0.06)'}}>
-        <h3 className="font-display font-bold text-white text-base">{title}</h3>
-        <button onClick={onClose} style={{color:'rgba(255,255,255,0.3)'}} className="hover:text-white transition p-1 rounded-lg"><X size={18}/></button>
+      <div className="flex items-center justify-between px-6 py-4 flex-shrink-0" style={{borderBottom:'1px solid var(--border)'}}>
+        <h3 className="font-display font-bold text-base" style={{color:'var(--t1)'}}>{title}</h3>
+        <button onClick={onClose} style={{color:'var(--t3)'}} className="transition p-1 rounded-lg"><X size={18}/></button>
       </div>
       <div className="overflow-y-auto px-6 py-5 flex-1">
         {children}
@@ -36,7 +37,7 @@ const Modal = ({title,onClose,children,wide=false})=>(
 );
 
 const lc = "block text-xs font-semibold tracking-widest mb-1.5";
-const ls = {color:'rgba(255,255,255,0.35)'};
+const ls = {color:'var(--t3)'};
 const ic = "inp px-3 py-2.5 rounded-xl text-sm";
 const ic2 = "inp px-3 py-2 rounded-lg text-xs";
 
@@ -62,6 +63,7 @@ export default function AdminPage() {
   const [loanModal, setLoanModal] = useState(null);
   const [selectedUser, setSelectedUser] = useState(null);
   const [resetPassModal, setResetPassModal] = useState(null);
+  // const [resetPassModal, setResetPassModal] = useState(null);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
 
   useEffect(()=>{ if(!loading&&(!user||user.role!=='ADMIN')) router.push('/login'); },[user,loading,router]);
@@ -122,15 +124,15 @@ export default function AdminPage() {
 
   const quickLinks = [
     {href:'/admin/setup-account', label:'⚡ Setup Account',  color:'#FF6A00'},
-    {href:'/admin/cards',         label:'💳 Virtual Cards',  color:'rgba(255,255,255,0.5)'},
-    {href:'/admin/notifications', label:'🔔 Notifications',  color:'rgba(255,255,255,0.5)'},
+    {href:'/admin/cards',         label:'💳 Virtual Cards',  color:'var(--t2)'},
+    {href:'/admin/notifications', label:'🔔 Notifications',  color:'var(--t2)'},
   ];
 
   const Sidebar = ()=>(
-    <div className="flex flex-col h-full" style={{background:'#0F0F0F',borderRight:'1px solid rgba(255,255,255,0.05)'}}>
-      <div className="px-4 py-5 flex items-center gap-3" style={{borderBottom:'1px solid rgba(255,255,255,0.05)'}}>
+    <div className="flex flex-col h-full" style={{background:'#0F0F0F',borderRight:'1px solid var(--border)'}}>
+      <div className="px-4 py-5 flex items-center gap-3" style={{borderBottom:'1px solid var(--border)'}}>
         <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{background:'#FF6A00'}}><Shield size={16} color="#000"/></div>
-        <div><p className="font-display font-bold text-white text-sm">NOVA TRUST</p><p className="text-xs" style={{color:'rgba(255,255,255,0.25)'}}>Admin Console</p></div>
+        <div><p className="font-display font-bold text-white text-sm">NOVA TRUST</p><p className="text-xs" style={{color:'var(--t3)'}}>Admin Console</p></div>
       </div>
       <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
         {navItems.map(({id,icon:Icon,label})=>(
@@ -139,7 +141,7 @@ export default function AdminPage() {
           </button>
         ))}
         <div className="divider my-3"/>
-        <p className="text-xs font-semibold px-3 mb-2" style={{color:'rgba(255,255,255,0.2)',letterSpacing:'0.08em'}}>QUICK LINKS</p>
+        <p className="text-xs font-semibold px-3 mb-2" style={{color:'var(--t3)',letterSpacing:'0.08em'}}>QUICK LINKS</p>
         {quickLinks.map(l=>(
           <Link key={l.href} href={l.href} className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all" style={{color:l.color, textDecoration:'none'}}>
             {l.label}
@@ -148,10 +150,10 @@ export default function AdminPage() {
         <div className="divider my-3"/>
         <Link href="/dashboard" className="nav-link flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium"><Users size={15}/>My Account</Link>
       </nav>
-      <div className="px-3 py-4" style={{borderTop:'1px solid rgba(255,255,255,0.05)'}}>
-        <div className="px-3 py-2 mb-2 rounded-xl" style={{background:'rgba(255,255,255,0.03)'}}>
-          <p className="text-xs font-semibold text-white">{user?.firstName} {user?.lastName}</p>
-          <p className="text-xs" style={{color:'rgba(255,255,255,0.25)'}}>Administrator</p>
+      <div className="px-3 py-4" style={{borderTop:'1px solid var(--border)'}}>
+        <div className="px-3 py-2 mb-2 rounded-xl" style={{background:'var(--s3)'}}>
+          <p className="text-xs font-semibold" style={{color:'var(--t1)'}}>{user?.firstName} {user?.lastName}</p>
+          <p className="text-xs" style={{color:'var(--t3)'}}>Administrator</p>
         </div>
         <button onClick={async()=>{await logout();router.push('/login');}} className="btn-ghost w-full flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-medium"><LogOut size={13}/>Sign out</button>
       </div>
@@ -293,7 +295,7 @@ export default function AdminPage() {
     const save = ()=>action(()=>api.patch(`/admin/loans/${loanModal.id}/review`,{...f,disbursedAt:f.disbursedAt||undefined,collectedAt:f.collectedAt||undefined}),`Loan ${f.status.toLowerCase()}`).then(()=>setLoanModal(null));
     return (
       <Modal title="Review Loan" onClose={()=>setLoanModal(null)}>
-        <div className="p-3 rounded-xl mb-4" style={{background:'rgba(255,255,255,0.03)',border:'1px solid rgba(255,255,255,0.06)'}}>
+        <div className="p-3 rounded-xl mb-4" style={{background:'var(--s3)',border:'1px solid var(--border)'}}>
           <p className="text-xs text-white font-semibold">{loanModal?.user?.firstName} {loanModal?.user?.lastName}</p>
           <p className="text-xs mt-0.5" style={{color:'rgba(255,255,255,0.35)'}}>Requested: ${loanModal?.amount?.toLocaleString()} • {loanModal?.purpose}</p>
         </div>
@@ -306,8 +308,8 @@ export default function AdminPage() {
               <div><label className={lc} style={ls}>MONTHS</label><input type="number" value={f.termMonths} onChange={e=>setF({...f,termMonths:e.target.value})} className={ic}/></div>
             </div>
             <div className="grid grid-cols-2 gap-2">
-              <div><label className={lc} style={ls}>APPROVAL DATE</label><input type="datetime-local" value={f.approvedAt||''} onChange={e=>setF({...f,approvedAt:e.target.value})} className={ic}/><p className="text-xs mt-1" style={{color:'rgba(255,255,255,0.2)'}}>When loan was approved</p></div>
-              <div><label className={lc} style={ls}>COLLECTED DATE</label><input type="datetime-local" value={f.collectedAt||''} onChange={e=>setF({...f,collectedAt:e.target.value})} className={ic}/><p className="text-xs mt-1" style={{color:'rgba(255,255,255,0.2)'}}>When funds were disbursed</p></div>
+              <div><label className={lc} style={ls}>APPROVAL DATE</label><input type="datetime-local" value={f.approvedAt||''} onChange={e=>setF({...f,approvedAt:e.target.value})} className={ic}/><p className="text-xs mt-1" style={{color:'var(--t3)'}}>When loan was approved</p></div>
+              <div><label className={lc} style={ls}>COLLECTED DATE</label><input type="datetime-local" value={f.collectedAt||''} onChange={e=>setF({...f,collectedAt:e.target.value})} className={ic}/><p className="text-xs mt-1" style={{color:'var(--t3)'}}>When funds were disbursed</p></div>
             </div>
           </>}
           {f.status==='REJECTED'&&<div><label className={lc} style={ls}>REASON</label><input type="text" value={f.rejectionReason} onChange={e=>setF({...f,rejectionReason:e.target.value})} className={ic} placeholder="Reason for rejection"/></div>}
@@ -330,8 +332,8 @@ export default function AdminPage() {
     return (
       <div className="modal-wrap" style={{zIndex:200}}>
         <div className="modal" style={{maxWidth:380}}>
-          <div className="flex items-center justify-between mb-4"><h3 className="font-display font-bold text-white text-base">Reset Password</h3><button onClick={onClose} style={{color:'rgba(255,255,255,0.3)'}}><X size={18}/></button></div>
-          <p className="text-sm mb-4" style={{color:'rgba(255,255,255,0.4)'}}>Set new password for <strong className="text-white">{user.firstName} {user.lastName}</strong></p>
+          <div className="flex items-center justify-between mb-4"><h3 className="font-display font-bold text-white text-base">Reset Password</h3><button onClick={onClose} style={{color:'var(--t3)'}}><X size={18}/></button></div>
+          <p className="text-sm mb-4" style={{color:'var(--t2)'}}>Set new password for <strong className="text-white">{user.firstName} {user.lastName}</strong></p>
           <label className={lc} style={ls}>NEW PASSWORD</label>
           <input type="password" value={pass} onChange={e=>setPass(e.target.value)} className={ic} placeholder="Min 8 characters" style={{marginBottom:16}}/>
           <div className="flex gap-3">
@@ -354,7 +356,7 @@ export default function AdminPage() {
     return (
       <div className="modal-wrap" style={{zIndex:200}}>
         <div className="modal" style={{maxWidth:380}}>
-          <div className="flex items-center justify-between mb-4"><h3 className="font-display font-bold text-white text-base">Delete User</h3><button onClick={onClose} style={{color:'rgba(255,255,255,0.3)'}}><X size={18}/></button></div>
+          <div className="flex items-center justify-between mb-4"><h3 className="font-display font-bold text-white text-base">Delete User</h3><button onClick={onClose} style={{color:'var(--t3)'}}><X size={18}/></button></div>
           <div className="mb-4 p-3 rounded-xl" style={{background:'rgba(239,68,68,0.08)',border:'1px solid rgba(239,68,68,0.2)'}}>
             <p className="text-sm" style={{color:'#f87171'}}>⚠️ This will permanently delete <strong>{user.firstName} {user.lastName}</strong> and all their data including accounts, transactions, cards, and loans. This cannot be undone.</p>
           </div>
@@ -370,33 +372,33 @@ export default function AdminPage() {
   // ── TABS CONTENT ──────────────────────────────────────────────────
   const Dashboard = ()=>{
     const s = data.stats;
-    if(!s) return <div className="p-8 text-center" style={{color:'rgba(255,255,255,0.2)'}}>Loading...</div>;
+    if(!s) return <div className="p-8 text-center" style={{color:'var(--t3)'}}>Loading...</div>;
     return (
       <div className="space-y-5">
         <div><p className="text-xs font-semibold tracking-widest" style={{color:'rgba(255,106,0,0.7)'}}>OVERVIEW</p><h1 className="font-display text-2xl font-bold text-white mt-0.5">Admin Dashboard</h1></div>
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {[{l:'Total Users',v:s.totalUsers,sub:`${s.activeUsers} active`},{l:'Transactions',v:s.totalTransactions,sub:'All time'},{l:'Pending Loans',v:s.pendingLoans,sub:'Needs review'},{l:'Fraud Flags',v:s.fraudFlags,sub:'Unresolved'}].map(x=>(
-            <div key={x.l} className="card p-5"><p className="text-xs mb-2" style={{color:'rgba(255,255,255,0.3)'}}>{x.l}</p><p className="font-display text-3xl font-bold text-white">{x.v}</p><p className="text-xs mt-1" style={{color:'rgba(255,255,255,0.2)'}}>{x.sub}</p></div>
+            <div key={x.l} className="card p-5"><p className="text-xs mb-2" style={{color:'var(--t3)'}}>{x.l}</p><p className="font-display text-3xl font-bold text-white">{x.v}</p><p className="text-xs mt-1" style={{color:'var(--t3)'}}>{x.sub}</p></div>
           ))}
         </div>
         <div className="grid grid-cols-3 gap-4">
           {[{l:'Total Deposited',v:s.totalDeposited,c:'#22c55e'},{l:'Total Withdrawn',v:s.totalWithdrawn,c:'#ef4444'},{l:'Total Transferred',v:s.totalTransferred,c:'#FF6A00'}].map(x=>(
-            <div key={x.l} className="card p-5"><p className="text-xs mb-1" style={{color:'rgba(255,255,255,0.3)'}}>{x.l}</p><p className="font-display text-2xl font-bold" style={{color:x.c}}>${(x.v||0).toLocaleString('en-US',{minimumFractionDigits:2})}</p></div>
+            <div key={x.l} className="card p-5"><p className="text-xs mb-1" style={{color:'var(--t3)'}}>{x.l}</p><p className="font-display text-2xl font-bold" style={{color:x.c}}>${(x.v||0).toLocaleString('en-US',{minimumFractionDigits:2})}</p></div>
           ))}
         </div>
         <div className="card overflow-hidden">
-          <div className="px-5 py-4" style={{borderBottom:'1px solid rgba(255,255,255,0.05)'}}><h3 className="font-display font-semibold text-white text-sm">Recent Transactions</h3></div>
+          <div className="px-5 py-4" style={{borderBottom:'1px solid var(--border)'}}><h3 className="font-display font-semibold text-sm" style={{color:'var(--t1)'}}>Recent Transactions</h3></div>
           <div className="overflow-x-auto"><table className="tbl">
             <thead><tr><th>Ref</th><th>Type</th><th>Amount</th><th>From</th><th>To</th><th>Status</th><th>Date</th></tr></thead>
             <tbody>{(data.transactions||[]).slice(0,8).map(tx=>(
               <tr key={tx.id}>
-                <td className="font-mono text-xs" style={{color:'rgba(255,255,255,0.3)'}}>{tx.reference?.slice(0,8)}...</td>
+                <td className="font-mono text-xs" style={{color:'var(--t3)'}}>{tx.reference?.slice(0,8)}...</td>
                 <td><Badge type="gray">{tx.type}</Badge></td>
-                <td className="font-semibold text-white">${tx.amount?.toFixed(2)}</td>
-                <td style={{color:'rgba(255,255,255,0.5)'}}>{tx.fromAccount?.user?`${tx.fromAccount.user.firstName} ${tx.fromAccount.user.lastName}`:'—'}</td>
-                <td style={{color:'rgba(255,255,255,0.5)'}}>{tx.toAccount?.user?`${tx.toAccount.user.firstName} ${tx.toAccount.user.lastName}`:'—'}</td>
+                <td className="font-semibold" style={{color:'var(--t1)'}}>${tx.amount?.toFixed(2)}</td>
+                <td style={{color:'var(--t2)'}}>{tx.fromAccount?.user?`${tx.fromAccount.user.firstName} ${tx.fromAccount.user.lastName}`:'—'}</td>
+                <td style={{color:'var(--t2)'}}>{tx.toAccount?.user?`${tx.toAccount.user.firstName} ${tx.toAccount.user.lastName}`:'—'}</td>
                 <td><Badge type={tx.status==='COMPLETED'?'green':tx.status==='REVERSED'?'blue':'yellow'}>{tx.status}</Badge></td>
-                <td style={{color:'rgba(255,255,255,0.3)'}}>{format(new Date(tx.createdAt),'MMM d, HH:mm')}</td>
+                <td style={{color:'var(--t3)'}}>{format(new Date(tx.createdAt),'MMM d, HH:mm')}</td>
               </tr>
             ))}</tbody>
           </table></div>
@@ -413,25 +415,25 @@ export default function AdminPage() {
           <Link href="/admin/setup-account" style={{display:'flex',alignItems:'center',gap:8,padding:'10px 20px',borderRadius:10,background:'#FF6A00',color:'#000',fontWeight:700,fontSize:13,textDecoration:'none',whiteSpace:'nowrap',boxShadow:'0 4px 16px rgba(255,106,0,0.35)'}}>
             <span>⚡</span> Setup New Account
           </Link>
-          <div className="relative"><Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2" style={{color:'rgba(255,255,255,0.3)'}}/><input type="text" placeholder="Search..." value={search} onChange={e=>setSearch(e.target.value)} onKeyDown={e=>e.key==='Enter'&&fetchData()} className="inp pl-9 pr-4 py-2.5 rounded-xl text-sm w-full sm:w-64"/></div>
+          <div className="relative"><Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2" style={{color:'var(--t3)'}}/><input type="text" placeholder="Search..." value={search} onChange={e=>setSearch(e.target.value)} onKeyDown={e=>e.key==='Enter'&&fetchData()} className="inp pl-9 pr-4 py-2.5 rounded-xl text-sm w-full sm:w-64"/></div>
         </div>
       </div>
       <div className="card overflow-hidden"><div className="overflow-x-auto"><table className="tbl">
         <thead><tr><th>User</th><th>Email</th><th>Accounts</th><th>Tier</th><th>KYC</th><th>Status</th><th>Actions</th></tr></thead>
         <tbody>
-          {dloading?<tr><td colSpan={7} className="text-center py-8" style={{color:'rgba(255,255,255,0.2)'}}>Loading...</td></tr>
+          {dloading?<tr><td colSpan={7} className="text-center py-8" style={{color:'var(--t3)'}}>Loading...</td></tr>
           :data.users.map(u=>(
             <tr key={u.id}>
               <td><div className="flex items-center gap-2"><div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0" style={{background:'rgba(255,106,0,0.15)',color:'#FF6A00'}}>{u.firstName?.[0]}{u.lastName?.[0]}</div><span className="font-medium text-white text-xs whitespace-nowrap">{u.firstName} {u.lastName}</span></div></td>
-              <td style={{color:'rgba(255,255,255,0.4)',fontSize:12}}>{u.email}</td>
+              <td style={{color:'var(--t2)',fontSize:12}}>{u.email}</td>
               <td><div className="flex flex-wrap gap-1">{(u.accounts||[]).map(a=><span key={a.id} className="badge badge-gray">{a.accountType}</span>)}</div></td>
               <td><Badge type={u.tier==='VIP'?'orange':u.tier==='ELITE'?'blue':'gray'}>{u.tier||'STANDARD'}</Badge></td>
               <td><Badge type={u.kyc?.status==='APPROVED'?'green':u.kyc?.status==='SUBMITTED'?'blue':'yellow'}>{u.kyc?.status||'PENDING'}</Badge></td>
               <td><Badge type={u.status==='ACTIVE'?'green':u.status==='FROZEN'?'blue':'red'}>{u.status}</Badge></td>
               <td>
                 <div className="flex gap-1 flex-wrap">
-                  <button onClick={()=>openUser(u.id)} className="p-1.5 rounded-lg transition" style={{background:'rgba(255,255,255,0.05)',color:'rgba(255,255,255,0.5)'}} title="Full profile"><Users size={12}/></button>
-                  <button onClick={()=>setEditUser(u)} className="p-1.5 rounded-lg transition" style={{background:'rgba(255,255,255,0.05)',color:'rgba(255,255,255,0.5)'}} title="Edit"><Edit2 size={12}/></button>
+                  <button onClick={()=>openUser(u.id)} className="p-1.5 rounded-lg transition" style={{background:'var(--s3)',color:'var(--t2)'}} title="Full profile"><Users size={12}/></button>
+                  <button onClick={()=>setEditUser(u)} className="p-1.5 rounded-lg transition" style={{background:'var(--s3)',color:'var(--t2)'}} title="Edit"><Edit2 size={12}/></button>
                   <button onClick={()=>setBalanceModal({userId:u.id,name:`${u.firstName} ${u.lastName}`,balance:u.accounts?.[0]?.balance||0,accountId:u.accounts?.[0]?.id||'',accounts:u.accounts})} className="p-1.5 rounded-lg transition" style={{background:'rgba(255,106,0,0.1)',color:'#FF6A00'}} title="Balance"><DollarSign size={12}/></button>
                   <button onClick={()=>action(()=>api.patch(`/admin/users/${u.id}/status`,{status:u.status==='ACTIVE'?'FROZEN':'ACTIVE'}),u.status==='ACTIVE'?'Frozen':'Activated')} className="p-1.5 rounded-lg transition" style={{background:'rgba(99,102,241,0.1)',color:'#818cf8'}} title="Freeze/Unfreeze">{u.status==='ACTIVE'?<XCircle size={12}/>:<Check size={12}/>}</button>
                   <button onClick={()=>setResetPassModal(u)} className="p-1.5 rounded-lg transition" style={{background:'rgba(251,191,36,0.1)',color:'#fbbf24'}} title="Reset Password"><Key size={12}/></button>
@@ -459,22 +461,22 @@ export default function AdminPage() {
       {/* Advanced filters */}
       <div className="card p-4">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <div><label className="block text-xs font-semibold tracking-widest mb-1" style={{color:'rgba(255,255,255,0.25)'}}>TYPE</label>
+          <div><label className="block text-xs font-semibold tracking-widest mb-1" style={{color:'var(--t3)'}}>TYPE</label>
             <select value={txFilters.type} onChange={e=>setTxFilters({...txFilters,type:e.target.value})} className="inp px-2 py-2 rounded-lg text-xs">
               <option value="">All Types</option>
               {['DEPOSIT','WITHDRAWAL','TRANSFER','ZELLE','CASHAPP','BILL_PAYMENT','LOAN_DISBURSEMENT','LOAN_REPAYMENT','MOBILE_DEPOSIT'].map(t=><option key={t}>{t}</option>)}
             </select>
           </div>
-          <div><label className="block text-xs font-semibold tracking-widest mb-1" style={{color:'rgba(255,255,255,0.25)'}}>STATUS</label>
+          <div><label className="block text-xs font-semibold tracking-widest mb-1" style={{color:'var(--t3)'}}>STATUS</label>
             <select value={txFilters.status} onChange={e=>setTxFilters({...txFilters,status:e.target.value})} className="inp px-2 py-2 rounded-lg text-xs">
               <option value="">All</option>{['COMPLETED','PENDING','FAILED','REVERSED'].map(s=><option key={s}>{s}</option>)}
             </select>
           </div>
-          <div><label className="block text-xs font-semibold tracking-widest mb-1" style={{color:'rgba(255,255,255,0.25)'}}>FROM DATE</label><input type="date" value={txFilters.startDate} onChange={e=>setTxFilters({...txFilters,startDate:e.target.value})} className="inp px-2 py-2 rounded-lg text-xs"/></div>
-          <div><label className="block text-xs font-semibold tracking-widest mb-1" style={{color:'rgba(255,255,255,0.25)'}}>TO DATE</label><input type="date" value={txFilters.endDate} onChange={e=>setTxFilters({...txFilters,endDate:e.target.value})} className="inp px-2 py-2 rounded-lg text-xs"/></div>
-          <div><label className="block text-xs font-semibold tracking-widest mb-1" style={{color:'rgba(255,255,255,0.25)'}}>MIN AMOUNT</label><input type="number" placeholder="0" value={txFilters.minAmount} onChange={e=>setTxFilters({...txFilters,minAmount:e.target.value})} className="inp px-2 py-2 rounded-lg text-xs"/></div>
-          <div><label className="block text-xs font-semibold tracking-widest mb-1" style={{color:'rgba(255,255,255,0.25)'}}>MAX AMOUNT</label><input type="number" placeholder="∞" value={txFilters.maxAmount} onChange={e=>setTxFilters({...txFilters,maxAmount:e.target.value})} className="inp px-2 py-2 rounded-lg text-xs"/></div>
-          <div><label className="block text-xs font-semibold tracking-widest mb-1" style={{color:'rgba(255,255,255,0.25)'}}>USER ID</label><input type="text" placeholder="Filter by user" value={txFilters.userId} onChange={e=>setTxFilters({...txFilters,userId:e.target.value})} className="inp px-2 py-2 rounded-lg text-xs font-mono"/></div>
+          <div><label className="block text-xs font-semibold tracking-widest mb-1" style={{color:'var(--t3)'}}>FROM DATE</label><input type="date" value={txFilters.startDate} onChange={e=>setTxFilters({...txFilters,startDate:e.target.value})} className="inp px-2 py-2 rounded-lg text-xs"/></div>
+          <div><label className="block text-xs font-semibold tracking-widest mb-1" style={{color:'var(--t3)'}}>TO DATE</label><input type="date" value={txFilters.endDate} onChange={e=>setTxFilters({...txFilters,endDate:e.target.value})} className="inp px-2 py-2 rounded-lg text-xs"/></div>
+          <div><label className="block text-xs font-semibold tracking-widest mb-1" style={{color:'var(--t3)'}}>MIN AMOUNT</label><input type="number" placeholder="0" value={txFilters.minAmount} onChange={e=>setTxFilters({...txFilters,minAmount:e.target.value})} className="inp px-2 py-2 rounded-lg text-xs"/></div>
+          <div><label className="block text-xs font-semibold tracking-widest mb-1" style={{color:'var(--t3)'}}>MAX AMOUNT</label><input type="number" placeholder="∞" value={txFilters.maxAmount} onChange={e=>setTxFilters({...txFilters,maxAmount:e.target.value})} className="inp px-2 py-2 rounded-lg text-xs"/></div>
+          <div><label className="block text-xs font-semibold tracking-widest mb-1" style={{color:'var(--t3)'}}>USER ID</label><input type="text" placeholder="Filter by user" value={txFilters.userId} onChange={e=>setTxFilters({...txFilters,userId:e.target.value})} className="inp px-2 py-2 rounded-lg text-xs font-mono"/></div>
           <div className="flex items-end gap-2">
             <button onClick={fetchData} className="btn-primary flex-1 py-2 rounded-lg text-xs">Apply</button>
             <button onClick={()=>setTxFilters({type:'',status:'',startDate:'',endDate:'',minAmount:'',maxAmount:'',userId:''})} className="btn-ghost px-3 py-2 rounded-lg text-xs">Clear</button>
@@ -485,19 +487,19 @@ export default function AdminPage() {
       <div className="card overflow-hidden"><div className="overflow-x-auto"><table className="tbl">
         <thead><tr><th>Ref</th><th>Type</th><th>Amount</th><th>From</th><th>To</th><th>Flagged</th><th>Status</th><th>Date</th><th>Actions</th></tr></thead>
         <tbody>
-          {dloading?<tr><td colSpan={9} className="text-center py-8" style={{color:'rgba(255,255,255,0.2)'}}>Loading...</td></tr>
+          {dloading?<tr><td colSpan={9} className="text-center py-8" style={{color:'var(--t3)'}}>Loading...</td></tr>
           :(data.transactions||[]).map(tx=>(
             <tr key={tx.id}>
-              <td className="font-mono" style={{fontSize:11,color:'rgba(255,255,255,0.3)'}}>{tx.reference?.slice(0,8)}...</td>
+              <td className="font-mono" style={{fontSize:11,color:'var(--t3)'}}>{tx.reference?.slice(0,8)}...</td>
               <td><Badge type="gray">{tx.type}</Badge></td>
-              <td className="font-semibold text-white">${tx.amount?.toFixed(2)}</td>
-              <td style={{color:'rgba(255,255,255,0.4)',fontSize:12}}>{tx.fromAccount?.user?`${tx.fromAccount.user.firstName} ${tx.fromAccount.user.lastName}`:'—'}</td>
-              <td style={{color:'rgba(255,255,255,0.4)',fontSize:12}}>{tx.toAccount?.user?`${tx.toAccount.user.firstName} ${tx.toAccount.user.lastName}`:'—'}</td>
-              <td>{tx.flagged?<span style={{color:'#f87171',fontSize:11}}>⚠ Yes</span>:<span style={{color:'rgba(255,255,255,0.2)',fontSize:11}}>—</span>}</td>
+              <td className="font-semibold" style={{color:'var(--t1)'}}>${tx.amount?.toFixed(2)}</td>
+              <td style={{color:'var(--t2)',fontSize:12}}>{tx.fromAccount?.user?`${tx.fromAccount.user.firstName} ${tx.fromAccount.user.lastName}`:'—'}</td>
+              <td style={{color:'var(--t2)',fontSize:12}}>{tx.toAccount?.user?`${tx.toAccount.user.firstName} ${tx.toAccount.user.lastName}`:'—'}</td>
+              <td>{tx.flagged?<span style={{color:'#f87171',fontSize:11}}>⚠ Yes</span>:<span style={{color:'var(--t3)',fontSize:11}}>—</span>}</td>
               <td><Badge type={tx.status==='COMPLETED'?'green':tx.status==='REVERSED'?'blue':'yellow'}>{tx.status}</Badge></td>
-              <td style={{color:'rgba(255,255,255,0.3)',fontSize:11,whiteSpace:'nowrap'}}>{format(new Date(tx.createdAt),'MMM d, HH:mm')}</td>
+              <td style={{color:'var(--t3)',fontSize:11,whiteSpace:'nowrap'}}>{format(new Date(tx.createdAt),'MMM d, HH:mm')}</td>
               <td><div className="flex gap-1">
-                <button onClick={()=>setEditTxModal(tx)} className="p-1.5 rounded-lg" style={{background:'rgba(255,255,255,0.05)',color:'rgba(255,255,255,0.4)'}} title="Edit"><Edit2 size={11}/></button>
+                <button onClick={()=>setEditTxModal(tx)} className="p-1.5 rounded-lg" style={{background:'var(--s3)',color:'var(--t2)'}} title="Edit"><Edit2 size={11}/></button>
                 {tx.type==='TRANSFER'&&tx.status==='COMPLETED'&&<button onClick={()=>action(()=>api.patch(`/admin/transactions/${tx.id}/reverse`),'Reversed')} className="p-1.5 rounded-lg" style={{background:'rgba(99,102,241,0.1)',color:'#818cf8'}} title="Reverse"><RotateCcw size={11}/></button>}
                 <button onClick={()=>{ if(confirm('Delete?')) action(()=>api.delete(`/admin/transactions/${tx.id}`),'Deleted'); }} className="p-1.5 rounded-lg" style={{background:'rgba(239,68,68,0.1)',color:'#f87171'}} title="Delete"><Trash2 size={11}/></button>
               </div></td>
@@ -514,16 +516,16 @@ export default function AdminPage() {
       <div className="card overflow-hidden"><div className="overflow-x-auto"><table className="tbl">
         <thead><tr><th>Client</th><th>Amount</th><th>Rate</th><th>Term</th><th>Monthly</th><th>Repaid</th><th>Purpose</th><th>Status</th><th>Actions</th></tr></thead>
         <tbody>
-          {dloading?<tr><td colSpan={9} className="text-center py-8" style={{color:'rgba(255,255,255,0.2)'}}>Loading...</td></tr>
+          {dloading?<tr><td colSpan={9} className="text-center py-8" style={{color:'var(--t3)'}}>Loading...</td></tr>
           :(data.loans||[]).map(l=>(
             <tr key={l.id}>
-              <td><p className="text-xs font-semibold text-white">{l.user?.firstName} {l.user?.lastName}</p><p style={{fontSize:11,color:'rgba(255,255,255,0.3)'}}>{l.user?.email}</p></td>
-              <td className="font-semibold text-white">${l.amount?.toLocaleString()}</td>
-              <td style={{color:'rgba(255,255,255,0.5)',fontSize:12}}>{l.interestRate}%</td>
-              <td style={{color:'rgba(255,255,255,0.5)',fontSize:12}}>{l.termMonths}mo</td>
-              <td style={{color:'rgba(255,255,255,0.5)',fontSize:12}}>${l.monthlyPayment?.toFixed(2)}</td>
-              <td style={{fontSize:12}}><span style={{color:'#4ade80'}}>${l.amountRepaid?.toFixed(2)}</span><span style={{color:'rgba(255,255,255,0.3)'}}> / ${l.totalRepayable?.toFixed(2)}</span></td>
-              <td style={{color:'rgba(255,255,255,0.4)',fontSize:12,maxWidth:120}} className="truncate">{l.purpose||'—'}</td>
+              <td><p className="text-xs font-semibold" style={{color:'var(--t1)'}}>{l.user?.firstName} {l.user?.lastName}</p><p style={{fontSize:11,color:'var(--t3)'}}>{l.user?.email}</p></td>
+              <td className="font-semibold" style={{color:'var(--t1)'}}>${l.amount?.toLocaleString()}</td>
+              <td style={{color:'var(--t2)',fontSize:12}}>{l.interestRate}%</td>
+              <td style={{color:'var(--t2)',fontSize:12}}>{l.termMonths}mo</td>
+              <td style={{color:'var(--t2)',fontSize:12}}>${l.monthlyPayment?.toFixed(2)}</td>
+              <td style={{fontSize:12}}><span style={{color:'#4ade80'}}>${l.amountRepaid?.toFixed(2)}</span><span style={{color:'var(--t3)'}}> / ${l.totalRepayable?.toFixed(2)}</span></td>
+              <td style={{color:'var(--t2)',fontSize:12,maxWidth:120}} className="truncate">{l.purpose||'—'}</td>
               <td><Badge type={l.status==='ACTIVE'?'green':l.status==='PAID'?'blue':l.status==='PENDING'?'yellow':'red'}>{l.status}</Badge></td>
               <td>{l.status==='PENDING'&&<button onClick={()=>setLoanModal(l)} className="btn-primary px-3 py-1.5 rounded-lg text-xs">Review</button>}</td>
             </tr>
@@ -539,15 +541,15 @@ export default function AdminPage() {
       <div className="card overflow-hidden"><div className="overflow-x-auto"><table className="tbl">
         <thead><tr><th>Client</th><th>Amount</th><th>Bank</th><th>Cheque #</th><th>Status</th><th>Date</th><th>Actions</th></tr></thead>
         <tbody>
-          {dloading?<tr><td colSpan={7} className="text-center py-8" style={{color:'rgba(255,255,255,0.2)'}}>Loading...</td></tr>
+          {dloading?<tr><td colSpan={7} className="text-center py-8" style={{color:'var(--t3)'}}>Loading...</td></tr>
           :(data.deposits||[]).map(d=>(
             <tr key={d.id}>
-              <td><p className="text-xs font-semibold text-white">{d.user?.firstName} {d.user?.lastName}</p><p style={{fontSize:11,color:'rgba(255,255,255,0.3)'}}>{d.user?.email}</p></td>
-              <td className="font-semibold text-white">${d.amount?.toFixed(2)}</td>
-              <td style={{color:'rgba(255,255,255,0.4)',fontSize:12}}>{d.bankName||'—'}</td>
-              <td className="font-mono" style={{fontSize:11,color:'rgba(255,255,255,0.4)'}}>{d.chequeNumber||'—'}</td>
+              <td><p className="text-xs font-semibold" style={{color:'var(--t1)'}}>{d.user?.firstName} {d.user?.lastName}</p><p style={{fontSize:11,color:'var(--t3)'}}>{d.user?.email}</p></td>
+              <td className="font-semibold" style={{color:'var(--t1)'}}>${d.amount?.toFixed(2)}</td>
+              <td style={{color:'var(--t2)',fontSize:12}}>{d.bankName||'—'}</td>
+              <td className="font-mono" style={{fontSize:11,color:'var(--t2)'}}>{d.chequeNumber||'—'}</td>
               <td><Badge type={d.status==='APPROVED'?'green':d.status==='REJECTED'?'red':'yellow'}>{d.status}</Badge></td>
-              <td style={{color:'rgba(255,255,255,0.3)',fontSize:11}}>{format(new Date(d.createdAt),'MMM d, yyyy')}</td>
+              <td style={{color:'var(--t3)',fontSize:11}}>{format(new Date(d.createdAt),'MMM d, yyyy')}</td>
               <td>{d.status==='PENDING'&&<div className="flex gap-1">
                 <button onClick={()=>action(()=>api.patch(`/admin/mobile-deposits/${d.id}/review`,{status:'APPROVED'}),'Approved')} className="px-2.5 py-1.5 rounded-lg text-xs font-semibold" style={{background:'rgba(34,197,94,0.12)',color:'#4ade80'}}>Approve</button>
                 <button onClick={()=>{ const r=prompt('Reason:'); if(r!==null) action(()=>api.patch(`/admin/mobile-deposits/${d.id}/review`,{status:'REJECTED',rejectionReason:r}),'Rejected'); }} className="px-2.5 py-1.5 rounded-lg text-xs font-semibold" style={{background:'rgba(239,68,68,0.1)',color:'#f87171'}}>Reject</button>
@@ -562,14 +564,14 @@ export default function AdminPage() {
   const FraudTab = ()=>(
     <div className="space-y-4">
       <div><p className="text-xs font-semibold tracking-widest" style={{color:'rgba(255,106,0,0.7)'}}>SECURITY</p><h1 className="font-display text-2xl font-bold text-white mt-0.5">Fraud Flags</h1></div>
-      {(data.fraud||[]).length===0?<div className="card flex flex-col items-center py-16" style={{color:'rgba(255,255,255,0.2)'}}><AlertTriangle size={32} className="mb-3 opacity-30"/><p>No unresolved flags</p></div>:(data.fraud||[]).map(f=>(
+      {(data.fraud||[]).length===0?<div className="card flex flex-col items-center py-16" style={{color:'var(--t3)'}}><AlertTriangle size={32} className="mb-3 opacity-30"/><p>No unresolved flags</p></div>:(data.fraud||[]).map(f=>(
         <div key={f.id} className="card p-5 flex items-start justify-between gap-4">
           <div className="flex items-start gap-3">
             <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style={{background:'rgba(239,68,68,0.1)',color:'#f87171'}}><AlertTriangle size={16}/></div>
             <div>
-              <div className="flex items-center gap-2 mb-1"><p className="text-sm font-semibold text-white">{f.user?.firstName} {f.user?.lastName}</p><Badge type={f.severity==='HIGH'?'red':f.severity==='MEDIUM'?'yellow':'gray'}>{f.severity}</Badge></div>
-              <p className="text-xs" style={{color:'rgba(255,255,255,0.5)'}}>{f.reason}</p>
-              <p className="text-xs mt-1" style={{color:'rgba(255,255,255,0.25)'}}>{f.user?.email} · {format(new Date(f.createdAt),'MMM d, yyyy HH:mm')}</p>
+              <div className="flex items-center gap-2 mb-1"><p className="text-sm font-semibold" style={{color:'var(--t1)'}}>{f.user?.firstName} {f.user?.lastName}</p><Badge type={f.severity==='HIGH'?'red':f.severity==='MEDIUM'?'yellow':'gray'}>{f.severity}</Badge></div>
+              <p className="text-xs" style={{color:'var(--t2)'}}>{f.reason}</p>
+              <p className="text-xs mt-1" style={{color:'var(--t3)'}}>{f.user?.email} · {format(new Date(f.createdAt),'MMM d, yyyy HH:mm')}</p>
             </div>
           </div>
           <button onClick={()=>action(()=>api.patch(`/admin/fraud-flags/${f.id}/resolve`),'Resolved')} className="px-3 py-2 rounded-xl text-xs font-semibold flex-shrink-0 flex items-center gap-1.5" style={{background:'rgba(34,197,94,0.1)',color:'#4ade80',border:'1px solid rgba(34,197,94,0.15)'}}><Check size={12}/>Resolve</button>
@@ -586,11 +588,11 @@ export default function AdminPage() {
         <tbody>
           {(data.logs||[]).map(l=>(
             <tr key={l.id}>
-              <td><p className="text-xs font-semibold text-white">{l.admin?.firstName} {l.admin?.lastName}</p></td>
+              <td><p className="text-xs font-semibold" style={{color:'var(--t1)'}}>{l.admin?.firstName} {l.admin?.lastName}</p></td>
               <td><Badge type="orange">{l.action}</Badge></td>
-              <td className="font-mono" style={{fontSize:11,color:'rgba(255,255,255,0.3)'}}>{l.targetId?.slice(0,12)||'—'}</td>
-              <td style={{color:'rgba(255,255,255,0.4)',fontSize:12,maxWidth:200}} className="truncate">{l.details||'—'}</td>
-              <td style={{color:'rgba(255,255,255,0.3)',fontSize:11,whiteSpace:'nowrap'}}>{format(new Date(l.createdAt),'MMM d, HH:mm')}</td>
+              <td className="font-mono" style={{fontSize:11,color:'var(--t3)'}}>{l.targetId?.slice(0,12)||'—'}</td>
+              <td style={{color:'var(--t2)',fontSize:12,maxWidth:200}} className="truncate">{l.details||'—'}</td>
+              <td style={{color:'var(--t3)',fontSize:11,whiteSpace:'nowrap'}}>{format(new Date(l.createdAt),'MMM d, HH:mm')}</td>
             </tr>
           ))}
         </tbody>
@@ -618,8 +620,8 @@ export default function AdminPage() {
               <Badge type={u.tier==='VIP'?'orange':u.tier==='ELITE'?'blue':'gray'}>{u.tier||'STANDARD'}</Badge>
               <Badge type={u.status==='ACTIVE'?'green':u.status==='FROZEN'?'blue':'red'}>{u.status}</Badge>
             </div>
-            <p className="text-xs" style={{color:'rgba(255,255,255,0.4)'}}>{u.email} · {u.phone||'No phone'}</p>
-            <p className="text-xs mt-0.5" style={{color:'rgba(255,255,255,0.25)'}}>Joined {format(new Date(u.createdAt),'MMM d, yyyy')} · Total Balance: <span style={{color:'#4ade80'}}>${totalBal.toLocaleString('en-US',{minimumFractionDigits:2})}</span></p>
+            <p className="text-xs" style={{color:'var(--t2)'}}>{u.email} · {u.phone||'No phone'}</p>
+            <p className="text-xs mt-0.5" style={{color:'var(--t3)'}}>Joined {format(new Date(u.createdAt),'MMM d, yyyy')} · Total Balance: <span style={{color:'#4ade80'}}>${totalBal.toLocaleString('en-US',{minimumFractionDigits:2})}</span></p>
             {u.adminNotes&&<div className="mt-2 p-2 rounded-lg text-xs" style={{background:'rgba(255,106,0,0.05)',color:'rgba(255,106,0,0.6)',border:'1px solid rgba(255,106,0,0.1)'}}><span className="font-semibold">Note: </span>{u.adminNotes}</div>}
           </div>
           <div className="flex flex-wrap gap-2">
@@ -638,7 +640,7 @@ export default function AdminPage() {
             <div key={a.id} className="card p-4">
               <div className="flex items-center justify-between mb-2"><Badge type={a.accountType==='SAVINGS'?'green':a.accountType==='INVESTMENT'?'blue':'orange'}>{a.accountType}</Badge><Badge type={a.isActive?'green':'red'}>{a.isActive?'Active':'Inactive'}</Badge></div>
               <p className="font-display text-xl font-bold text-white">${a.balance.toLocaleString('en-US',{minimumFractionDigits:2})}</p>
-              <p className="font-mono text-xs mt-1" style={{color:'rgba(255,255,255,0.25)'}}>{a.accountNumber}</p>
+              <p className="font-mono text-xs mt-1" style={{color:'var(--t3)'}}>{a.accountNumber}</p>
             </div>
           ))}
         </div>
@@ -646,17 +648,25 @@ export default function AdminPage() {
         {/* Loans */}
         {(u.loansAsDebtor||[]).length>0&&(
           <div className="card overflow-hidden">
-            <div className="px-5 py-3" style={{borderBottom:'1px solid rgba(255,255,255,0.05)'}}><h3 className="font-display font-semibold text-white text-sm">Loans</h3></div>
+            <div className="px-5 py-3" style={{borderBottom:'1px solid var(--border)'}}><h3 className="font-display font-semibold text-sm" style={{color:'var(--t1)'}}>Loans</h3></div>
             <div className="overflow-x-auto"><table className="tbl">
-              <thead><tr><th>Amount</th><th>Rate</th><th>Term</th><th>Repaid</th><th>Status</th><th>Actions</th></tr></thead>
+              <thead><tr><th>Amount</th><th>Rate</th><th>Term</th><th>Disbursed</th><th>Next Payment</th><th>Repaid</th><th>Status</th><th>Actions</th></tr></thead>
               <tbody>{u.loansAsDebtor.map(l=>(
                 <tr key={l.id}>
-                  <td className="font-semibold text-white">${l.amount?.toLocaleString()}</td>
-                  <td style={{fontSize:12,color:'rgba(255,255,255,0.4)'}}>{l.interestRate}%</td>
-                  <td style={{fontSize:12,color:'rgba(255,255,255,0.4)'}}>{l.termMonths}mo</td>
-                  <td style={{fontSize:12}}><span style={{color:'#4ade80'}}>${l.amountRepaid?.toFixed(2)}</span> / ${l.totalRepayable?.toFixed(2)}</td>
+                  <td className="font-semibold" style={{color:'var(--t1)'}}>${l.amount?.toLocaleString()}</td>
+                  <td style={{fontSize:12,color:'var(--t2)'}}>{l.interestRate}%</td>
+                  <td style={{fontSize:12,color:'var(--t2)'}}>{l.termMonths}mo</td>
+                  <td style={{fontSize:11,color:'var(--t3)'}}>{l.approvedAt?format(new Date(l.approvedAt),'MMM d, yyyy'):'—'}</td>
+                  <td style={{fontSize:11,color:'var(--t3)'}}>{l.nextPaymentDate?format(new Date(l.nextPaymentDate),'MMM d, yyyy'):'—'}</td>
+                  <td style={{fontSize:12}}><span style={{color:'#22c55e'}}>${l.amountRepaid?.toFixed(2)}</span><span style={{color:'var(--t3)'}}> / ${l.totalRepayable?.toFixed(2)}</span></td>
                   <td><Badge type={l.status==='ACTIVE'?'green':l.status==='PAID'?'blue':l.status==='PENDING'?'yellow':'red'}>{l.status}</Badge></td>
-                  <td>{l.status==='PENDING'&&<button onClick={()=>setLoanModal(l)} className="btn-primary px-2 py-1 rounded-lg text-xs">Review</button>}</td>
+                  <td>
+                    <div className="flex gap-1">
+                      <button onClick={()=>setLoanModal(l)} className="px-2 py-1 rounded-lg text-xs font-semibold transition" style={{background:'var(--orangeD)',color:'var(--orange)',border:'1px solid rgba(255,106,0,0.2)'}}>
+                        {l.status==='PENDING'?'Review':'Edit'}
+                      </button>
+                    </div>
+                  </td>
                 </tr>
               ))}</tbody>
             </table></div>
@@ -666,17 +676,17 @@ export default function AdminPage() {
         {/* Zelle */}
         {(u.zelleTransfers||[]).length>0&&(
           <div className="card overflow-hidden">
-            <div className="px-5 py-3" style={{borderBottom:'1px solid rgba(255,255,255,0.05)'}}><h3 className="font-display font-semibold text-white text-sm">Zelle History</h3></div>
+            <div className="px-5 py-3" style={{borderBottom:'1px solid var(--border)'}}><h3 className="font-display font-semibold text-sm" style={{color:'var(--t1)'}}>Zelle History</h3></div>
             <div className="overflow-x-auto"><table className="tbl">
               <thead><tr><th>Direction</th><th>Amount</th><th>Recipient</th><th>Memo</th><th>Status</th><th>Date</th></tr></thead>
               <tbody>{u.zelleTransfers.map(z=>(
                 <tr key={z.id}>
                   <td><Badge type={z.direction==='RECEIVED'?'green':'red'}>{z.direction}</Badge></td>
                   <td className="font-semibold" style={{color:z.direction==='RECEIVED'?'#4ade80':'#f87171'}}>{z.direction==='RECEIVED'?'+':'-'}${z.amount?.toFixed(2)}</td>
-                  <td style={{fontSize:12,color:'rgba(255,255,255,0.4)'}}>{z.recipientName||z.recipientEmail||z.recipientPhone||'—'}</td>
-                  <td style={{fontSize:12,color:'rgba(255,255,255,0.3)'}}>{z.memo||'—'}</td>
+                  <td style={{fontSize:12,color:'var(--t2)'}}>{z.recipientName||z.recipientEmail||z.recipientPhone||'—'}</td>
+                  <td style={{fontSize:12,color:'var(--t3)'}}>{z.memo||'—'}</td>
                   <td><Badge type="green">{z.status}</Badge></td>
-                  <td style={{fontSize:11,color:'rgba(255,255,255,0.3)'}}>{format(new Date(z.createdAt),'MMM d, HH:mm')}</td>
+                  <td style={{fontSize:11,color:'var(--t3)'}}>{format(new Date(z.createdAt),'MMM d, HH:mm')}</td>
                 </tr>
               ))}</tbody>
             </table></div>
@@ -686,16 +696,16 @@ export default function AdminPage() {
         {/* CashApp */}
         {(u.cashAppTransfers||[]).length>0&&(
           <div className="card overflow-hidden">
-            <div className="px-5 py-3" style={{borderBottom:'1px solid rgba(255,255,255,0.05)'}}><h3 className="font-display font-semibold text-white text-sm">Cash App History</h3></div>
+            <div className="px-5 py-3" style={{borderBottom:'1px solid var(--border)'}}><h3 className="font-display font-semibold text-sm" style={{color:'var(--t1)'}}>Cash App History</h3></div>
             <div className="overflow-x-auto"><table className="tbl">
               <thead><tr><th>Direction</th><th>Amount</th><th>$Cashtag</th><th>Note</th><th>Date</th></tr></thead>
               <tbody>{u.cashAppTransfers.map(c=>(
                 <tr key={c.id}>
                   <td><Badge type={c.direction==='RECEIVED'?'green':'red'}>{c.direction}</Badge></td>
                   <td className="font-semibold" style={{color:c.direction==='RECEIVED'?'#4ade80':'#f87171'}}>{c.direction==='RECEIVED'?'+':'-'}${c.amount?.toFixed(2)}</td>
-                  <td style={{fontSize:12,color:'rgba(255,255,255,0.4)'}}>{c.cashtag||'—'}</td>
-                  <td style={{fontSize:12,color:'rgba(255,255,255,0.3)'}}>{c.note||'—'}</td>
-                  <td style={{fontSize:11,color:'rgba(255,255,255,0.3)'}}>{format(new Date(c.createdAt),'MMM d, HH:mm')}</td>
+                  <td style={{fontSize:12,color:'var(--t2)'}}>{c.cashtag||'—'}</td>
+                  <td style={{fontSize:12,color:'var(--t3)'}}>{c.note||'—'}</td>
+                  <td style={{fontSize:11,color:'var(--t3)'}}>{format(new Date(c.createdAt),'MMM d, HH:mm')}</td>
                 </tr>
               ))}</tbody>
             </table></div>
@@ -705,16 +715,16 @@ export default function AdminPage() {
         {/* Bill Payments */}
         {(u.billPayments||[]).length>0&&(
           <div className="card overflow-hidden">
-            <div className="px-5 py-3" style={{borderBottom:'1px solid rgba(255,255,255,0.05)'}}><h3 className="font-display font-semibold text-white text-sm">Bill Payments</h3></div>
+            <div className="px-5 py-3" style={{borderBottom:'1px solid var(--border)'}}><h3 className="font-display font-semibold text-sm" style={{color:'var(--t1)'}}>Bill Payments</h3></div>
             <div className="overflow-x-auto"><table className="tbl">
               <thead><tr><th>Biller</th><th>Type</th><th>Amount</th><th>Status</th><th>Date</th></tr></thead>
               <tbody>{u.billPayments.map(b=>(
                 <tr key={b.id}>
                   <td className="font-medium text-white text-xs">{b.billerName}</td>
                   <td><Badge type="gray">{b.billType}</Badge></td>
-                  <td className="font-semibold text-white">${b.amount?.toFixed(2)}</td>
+                  <td className="font-semibold" style={{color:'var(--t1)'}}>${b.amount?.toFixed(2)}</td>
                   <td><Badge type="green">{b.status}</Badge></td>
-                  <td style={{fontSize:11,color:'rgba(255,255,255,0.3)'}}>{format(new Date(b.createdAt),'MMM d')}</td>
+                  <td style={{fontSize:11,color:'var(--t3)'}}>{format(new Date(b.createdAt),'MMM d')}</td>
                 </tr>
               ))}</tbody>
             </table></div>
@@ -749,12 +759,12 @@ export default function AdminPage() {
     };
     return (
       <Modal title="Reset User Password" onClose={()=>setResetPassModal(null)}>
-        <p className="text-xs mb-4" style={{color:'rgba(255,255,255,0.4)'}}>{resetPassModal?.firstName} {resetPassModal?.lastName} · {resetPassModal?.email}</p>
+        <p className="text-xs mb-4" style={{color:'var(--t2)'}}>{resetPassModal?.firstName} {resetPassModal?.lastName} · {resetPassModal?.email}</p>
         <div className="mb-5">
           <label className={lc} style={ls}>NEW PASSWORD</label>
           <div className="relative">
             <input type={show?'text':'password'} value={newPass} onChange={e=>setNewPass(e.target.value)} className={ic} placeholder="Min 8 characters"/>
-            <button type="button" onClick={()=>setShow(!show)} style={{position:'absolute',right:10,top:'50%',transform:'translateY(-50%)',background:'none',border:'none',cursor:'pointer',color:'rgba(255,255,255,0.3)'}}>{show?<EyeOff size={14}/>:<Eye size={14}/>}</button>
+            <button type="button" onClick={()=>setShow(!show)} style={{position:'absolute',right:10,top:'50%',transform:'translateY(-50%)',background:'none',border:'none',cursor:'pointer',color:'var(--t3)'}}>{show?<EyeOff size={14}/>:<Eye size={14}/>}</button>
           </div>
         </div>
         <div className="flex gap-3">
@@ -783,16 +793,16 @@ export default function AdminPage() {
         <div className="card overflow-hidden"><div className="overflow-x-auto"><table className="tbl">
           <thead><tr><th>Client</th><th>Type</th><th>Network</th><th>Account</th><th>Status</th><th>Applied</th><th>Actions</th></tr></thead>
           <tbody>
-            {dloading?<tr><td colSpan={7} className="text-center py-8" style={{color:'rgba(255,255,255,0.2)'}}>Loading...</td></tr>
-            :(data.cards||[]).length===0?<tr><td colSpan={7} className="text-center py-8" style={{color:'rgba(255,255,255,0.2)'}}>No card applications</td></tr>
+            {dloading?<tr><td colSpan={7} className="text-center py-8" style={{color:'var(--t3)'}}>Loading...</td></tr>
+            :(data.cards||[]).length===0?<tr><td colSpan={7} className="text-center py-8" style={{color:'var(--t3)'}}>No card applications</td></tr>
             :(data.cards||[]).map(c=>(
               <tr key={c.id}>
-                <td><p className="text-xs font-semibold text-white">{c.account?.user?.firstName} {c.account?.user?.lastName}</p><p style={{fontSize:11,color:'rgba(255,255,255,0.3)'}}>{c.account?.user?.email}</p></td>
+                <td><p className="text-xs font-semibold" style={{color:'var(--t1)'}}>{c.account?.user?.firstName} {c.account?.user?.lastName}</p><p style={{fontSize:11,color:'var(--t3)'}}>{c.account?.user?.email}</p></td>
                 <td><Badge type="gray">{c.type}</Badge></td>
-                <td style={{color:'rgba(255,255,255,0.5)',fontSize:12}}>{c.network}</td>
-                <td style={{fontSize:11,color:'rgba(255,255,255,0.3)',fontFamily:'monospace'}}>{c.account?.accountNumber}</td>
+                <td style={{color:'var(--t2)',fontSize:12}}>{c.network}</td>
+                <td style={{fontSize:11,color:'var(--t3)',fontFamily:'monospace'}}>{c.account?.accountNumber}</td>
                 <td>{statusBadge(c.status)}</td>
-                <td style={{fontSize:11,color:'rgba(255,255,255,0.3)',whiteSpace:'nowrap'}}>{format(new Date(c.createdAt),'MMM d, yyyy')}</td>
+                <td style={{fontSize:11,color:'var(--t3)',whiteSpace:'nowrap'}}>{format(new Date(c.createdAt),'MMM d, yyyy')}</td>
                 <td>{c.status==='PENDING'&&<div className="flex gap-2">
                   <button onClick={()=>approveCard(c.id)} className="px-3 py-1.5 rounded-lg text-xs font-semibold" style={{background:'rgba(34,197,94,0.12)',color:'#4ade80',border:'1px solid rgba(34,197,94,0.2)'}}>Approve</button>
                   <button onClick={()=>rejectCard(c.id)} className="px-3 py-1.5 rounded-lg text-xs font-semibold" style={{background:'rgba(239,68,68,0.1)',color:'#f87171',border:'1px solid rgba(239,68,68,0.15)'}}>Reject</button>
@@ -808,7 +818,7 @@ export default function AdminPage() {
   const tabContent = {dashboard:<Dashboard/>,users:<UsersTab/>,transactions:<TxTab/>,loans:<LoansTab/>,cards:<CardsTab/>,deposits:<DepositsTab/>,fraud:<FraudTab/>,logs:<LogsTab/>,userdetail:<UserDetailTab/>};
 
   return (
-    <div className="flex h-screen" style={{background:'#0B0B0B'}}>
+    <div className="flex h-screen" style={{background:'var(--bg)'}}>
       {/* Desktop sidebar */}
       <div className="hidden lg:flex flex-col w-56 flex-shrink-0"><Sidebar/></div>
 
@@ -823,12 +833,12 @@ export default function AdminPage() {
 
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Mobile header */}
-        <div className="lg:hidden flex items-center justify-between px-4 py-3" style={{background:'#0F0F0F',borderBottom:'1px solid rgba(255,255,255,0.05)'}}>
-          <button onClick={()=>setSideOpen(true)} className="p-2 rounded-xl" style={{color:'rgba(255,255,255,0.5)',background:'rgba(255,255,255,0.05)'}}><Menu size={18}/></button>
+        <div className="lg:hidden flex items-center justify-between px-4 py-3" style={{background:'#0F0F0F',borderBottom:'1px solid var(--border)'}}>
+          <button onClick={()=>setSideOpen(true)} className="p-2 rounded-xl" style={{color:'var(--t2)',background:'var(--s3)'}}><Menu size={18}/></button>
           <div className="flex items-center gap-2"><div className="w-6 h-6 rounded-lg flex items-center justify-center" style={{background:'#FF6A00'}}><Shield size={12} color="#000"/></div><span className="font-display font-bold text-white text-sm">ADMIN</span></div>
           <div className="w-6"/>
         </div>
-        <main className="flex-1 overflow-y-auto p-5 lg:p-7">{tabContent[tab]||<Dashboard/>}</main>
+        <main className="flex-1 overflow-y-auto p-5 lg:p-7" style={{background:'var(--bg)',color:'var(--t1)'}}>{tabContent[tab]||<Dashboard/>}</main>
       </div>
 
       {/* Modals */}

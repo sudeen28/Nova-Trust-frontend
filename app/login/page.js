@@ -109,7 +109,7 @@ export default function LoginPage() {
       </div>
 
       {/* Right form */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center p-8">
+      <div className="w-full lg:w-1/2 flex items-center justify-center p-8" style={{background:'#0B0B0B'}}>
         <div className="w-full max-w-sm">
 
           {/* Mobile logo */}
@@ -160,12 +160,7 @@ export default function LoginPage() {
                 </button>
               </form>
 
-              <div className="mt-8 p-4 rounded-xl" style={{ background: 'rgba(255,106,0,0.05)', border: '1px solid rgba(255,106,0,0.1)' }}>
-                <p className="text-xs font-semibold mb-2" style={{ color: 'rgba(255,106,0,0.6)' }}>DEMO ACCESS</p>
-                <p className="text-xs" style={{ color: 'rgba(255,255,255,0.35)' }}>Admin: <span className="font-mono" style={{ color: 'rgba(255,255,255,0.65)' }}>admin@novatrust.com</span></p>
-                <p className="text-xs" style={{ color: 'rgba(255,255,255,0.35)' }}>User:  <span className="font-mono" style={{ color: 'rgba(255,255,255,0.65)' }}>james@demo.com</span></p>
-                <p className="text-xs" style={{ color: 'rgba(255,255,255,0.35)' }}>Pass:  <span className="font-mono" style={{ color: 'rgba(255,255,255,0.65)' }}>Password123</span></p>
-              </div>
+
 
               <p className="text-center text-xs mt-5" style={{ color: 'rgba(255,255,255,0.25)' }}>
                 New client? <Link href="/register" style={{ color: '#FF6A00' }}>Open account</Link>
@@ -185,10 +180,10 @@ export default function LoginPage() {
                 TWO-FACTOR VERIFICATION
               </p>
               <h2 className="font-display text-3xl font-bold text-white mb-2">Enter Code</h2>
-              <p className="text-sm mb-1" style={{ color: 'rgba(255,255,255,0.35)' }}>
+              <p className="text-sm mb-1" style={{ color: '#888888' }}>
                 A 6-digit code was sent to
               </p>
-              <p className="text-base font-semibold mb-8" style={{ color: 'rgba(255,255,255,0.7)' }}>
+              <p className="text-base font-semibold mb-8" style={{ color: '#cccccc' }}>
                 {otpData.maskedEmail}
               </p>
 
@@ -203,12 +198,12 @@ export default function LoginPage() {
                     maxLength={6}
                     value={otp}
                     onChange={e => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                    className="inp px-4 py-5 rounded-xl text-4xl font-bold text-center tracking-[0.5em] font-mono"
+                    className="inp px-4 py-5 rounded-xl text-4xl font-bold text-center tracking-[0.5em] font-mono" style={{background:'#1a1a1a',color:'#ffffff',borderColor:'rgba(255,106,0,0.3)'}}
                     placeholder="——————"
                     autoFocus
                     required
                   />
-                  <p className="text-xs mt-2 text-center" style={{ color: 'rgba(255,255,255,0.2)' }}>
+                  <p className="text-xs mt-2 text-center" style={{ color: '#777777' }}>
                     Code expires in 10 minutes
                   </p>
                 </div>
@@ -223,7 +218,7 @@ export default function LoginPage() {
 
               <div className="flex items-center justify-between mt-5">
                 <button onClick={() => { setStep('credentials'); setOtp(''); }}
-                  className="text-xs transition" style={{ color: 'rgba(255,255,255,0.3)' }}>
+                  className="text-xs transition" style={{ color: '#888888' }}>
                   ← Back to login
                 </button>
                 <button onClick={handleResend} disabled={resending}
