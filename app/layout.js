@@ -8,14 +8,17 @@ export const metadata = {
   description: 'Exclusive private banking platform',
 };
 
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,       // prevents zoom on input focus on iOS
+  userScalable: false,
+};
+
 export default function RootLayout({ children }) {
   return (
     <html lang="en" data-theme="light">
       <head>
-        {/*
-          Inline script runs BEFORE React hydrates.
-          This prevents any flash of wrong theme on page load.
-        */}
         <script
           dangerouslySetInnerHTML={{
             __html: `
