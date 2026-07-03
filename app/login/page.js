@@ -215,7 +215,7 @@ export default function LoginPage() {
                     onChange={e => setForm({ ...form, email: e.target.value })}
                     className="inp px-4 py-3.5 rounded-xl text-sm"
                     style={{ background: '#161616', color: '#fff', borderColor: 'rgba(255,255,255,0.08)', fontSize: '16px' }}
-                    placeholder="you@example.com"
+                    placeholder="username or email"
                     autoComplete="email"
                     required
                   />

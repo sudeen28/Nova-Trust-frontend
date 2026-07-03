@@ -8,7 +8,6 @@ import toast from 'react-hot-toast';
 import { Eye, EyeOff, Users, ArrowLeftRight, AlertTriangle, Shield, LogOut, LayoutDashboard, Camera, Landmark, Zap, Smartphone, FileText, Search, Plus, Edit2, Trash2, RotateCcw, DollarSign, X, Save, Check, XCircle, Menu, Key, CreditCard } from 'lucide-react';
 import { format } from 'date-fns';
 
-// ── SMALL COMPONENTS ──────────────────────────────────────────────
 const Badge = ({children,type='gray'})=><span className={`badge badge-${type}`}>{children}</span>;
 const Spinner = ()=><div className="spinner mx-auto"/>;
 
@@ -41,7 +40,8 @@ const ls = {color:'var(--t3)'};
 const ic = "inp px-3 py-2.5 rounded-xl text-sm";
 const ic2 = "inp px-3 py-2 rounded-lg text-xs";
 
-// ── MAIN ──────────────────────────────────────────────────────────
+const TX_TYPES = ['DEPOSIT','WITHDRAWAL','TRANSFER','PAYMENT','ZELLE','CASHAPP','BILL_PAYMENT','LOAN_DISBURSEMENT','LOAN_REPAYMENT','MOBILE_DEPOSIT'];
+
 export default function AdminPage() {
   const { user, loading, logout } = useAuth();
   const router = useRouter();
@@ -57,13 +57,14 @@ export default function AdminPage() {
   const [balanceModal, setBalanceModal] = useState(null);
   const [addTxModal, setAddTxModal] = useState(null);
   const [editTxModal, setEditTxModal] = useState(null);
+  const [bulkTxModal, setBulkTxModal] = useState(null);
   const [createAccModal, setCreateAccModal] = useState(null);
   const [zelleModal, setZelleModal] = useState(null);
   const [cashModal, setCashModal] = useState(null);
   const [loanModal, setLoanModal] = useState(null);
+  const [createLoanModal, setCreateLoanModal] = useState(null);
   const [selectedUser, setSelectedUser] = useState(null);
   const [resetPassModal, setResetPassModal] = useState(null);
-  // const [resetPassModal, setResetPassModal] = useState(null);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
 
   useEffect(()=>{ if(!loading&&(!user||user.role!=='ADMIN')) router.push('/login'); },[user,loading,router]);
@@ -161,6 +162,7 @@ export default function AdminPage() {
   );
 
   // ── MODALS ────────────────────────────────────────────────────────
+
   const EditUserModal = ()=>{
     const [f,setF] = useState({...editUser,adminNotes:editUser?.adminNotes||''});
     const save = ()=>action(()=>api.put(`/admin/users/${f.id}`,f),'User updated').then(()=>setEditUser(null));
@@ -223,7 +225,7 @@ export default function AdminPage() {
         <div className="grid grid-cols-2 gap-3 mb-4">
           <div className="col-span-2"><label className={lc} style={ls}>USER ID</label><div className="flex gap-2"><input type="text" value={f.userId} onChange={e=>setF({...f,userId:e.target.value})} className={`${ic} flex-1`} placeholder="Paste user ID"/><button onClick={()=>loadAccounts(f.userId)} className="btn-ghost px-3 py-2.5 rounded-xl text-xs">Load</button></div></div>
           {userAccounts.length>0&&<div className="col-span-2"><label className={lc} style={ls}>ACCOUNT</label><select value={f.accountId} onChange={e=>setF({...f,accountId:e.target.value})} className="inp px-3 py-2.5 rounded-xl text-sm">{userAccounts.map(a=><option key={a.id} value={a.id}>{a.accountType} — ${a.balance.toFixed(2)}</option>)}</select></div>}
-          <div><label className={lc} style={ls}>TYPE</label><select value={f.type} onChange={e=>setF({...f,type:e.target.value})} className="inp px-3 py-2.5 rounded-xl text-sm">{['DEPOSIT','WITHDRAWAL','TRANSFER','PAYMENT','ZELLE','CASHAPP','BILL_PAYMENT','LOAN_DISBURSEMENT','LOAN_REPAYMENT','MOBILE_DEPOSIT'].map(t=><option key={t}>{t}</option>)}</select></div>
+          <div><label className={lc} style={ls}>TYPE</label><select value={f.type} onChange={e=>setF({...f,type:e.target.value})} className="inp px-3 py-2.5 rounded-xl text-sm">{TX_TYPES.map(t=><option key={t}>{t}</option>)}</select></div>
           <div><label className={lc} style={ls}>STATUS</label><select value={f.status} onChange={e=>setF({...f,status:e.target.value})} className="inp px-3 py-2.5 rounded-xl text-sm">{['COMPLETED','PENDING','FAILED'].map(s=><option key={s}>{s}</option>)}</select></div>
           <div><label className={lc} style={ls}>AMOUNT ($)</label><input type="number" min="0.01" value={f.amount} onChange={e=>setF({...f,amount:e.target.value})} className={ic} placeholder="0.00"/></div>
           <div><label className={lc} style={ls}>DATE (OPTIONAL)</label><input type="datetime-local" value={f.createdAt} onChange={e=>setF({...f,createdAt:e.target.value})} className={ic}/></div>
@@ -234,18 +236,237 @@ export default function AdminPage() {
     );
   };
 
+  // Fixed: api.patch (not api.put)
   const EditTxModal = ()=>{
-    const [f,setF] = useState({amount:editTxModal?.amount||'',status:editTxModal?.status||'',description:editTxModal?.description||'',createdAt:''});
-    const save = ()=>action(()=>api.put(`/admin/transactions/${editTxModal.id}`,f),'Updated').then(()=>setEditTxModal(null));
+    const [f,setF] = useState({amount:editTxModal?.amount||'',type:editTxModal?.type||'',status:editTxModal?.status||'',description:editTxModal?.description||'',date:''});
+    const save = ()=>action(()=>api.patch(`/admin/transactions/${editTxModal.id}`,f),'Updated').then(()=>setEditTxModal(null));
     return (
       <Modal title="Edit Transaction" onClose={()=>setEditTxModal(null)}>
         <div className="space-y-3 mb-4">
+          <div><label className={lc} style={ls}>TYPE</label><select value={f.type} onChange={e=>setF({...f,type:e.target.value})} className="inp px-3 py-2.5 rounded-xl text-sm">{TX_TYPES.map(t=><option key={t}>{t}</option>)}</select></div>
           <div><label className={lc} style={ls}>AMOUNT ($)</label><input type="number" value={f.amount} onChange={e=>setF({...f,amount:e.target.value})} className={ic}/></div>
           <div><label className={lc} style={ls}>STATUS</label><select value={f.status} onChange={e=>setF({...f,status:e.target.value})} className="inp px-3 py-2.5 rounded-xl text-sm">{['PENDING','COMPLETED','FAILED','REVERSED'].map(s=><option key={s}>{s}</option>)}</select></div>
           <div><label className={lc} style={ls}>DESCRIPTION</label><input type="text" value={f.description} onChange={e=>setF({...f,description:e.target.value})} className={ic}/></div>
-          <div><label className={lc} style={ls}>DATE OVERRIDE</label><input type="datetime-local" value={f.createdAt} onChange={e=>setF({...f,createdAt:e.target.value})} className={ic}/></div>
+          <div><label className={lc} style={ls}>DATE OVERRIDE</label><input type="datetime-local" value={f.date} onChange={e=>setF({...f,date:e.target.value})} className={ic}/></div>
         </div>
         <div className="flex gap-3"><button onClick={()=>setEditTxModal(null)} className="btn-ghost flex-1 py-2.5 rounded-xl text-sm">Cancel</button><button onClick={save} className="btn-primary flex-1 py-2.5 rounded-xl text-sm">Save</button></div>
+      </Modal>
+    );
+  };
+
+  // ── BULK TX MODAL ────────────────────────────────────────────────
+  const BulkTxModal = ()=>{
+    const emptyRow = ()=>({type:'DEPOSIT',amount:'',description:'',date:'',reference:''});
+    const [mode,setMode] = useState('manual'); // 'manual' | 'generate'
+    const [userId,setUserId] = useState(bulkTxModal?.userId||'');
+    const [rows,setRows] = useState([emptyRow()]);
+    const [gen,setGen] = useState({
+      startDate:'', endDate:'',
+      minCount:5, maxCount:15,
+      minAmount:10, maxAmount:2000,
+      status:'COMPLETED',
+      types:[...TX_TYPES],
+    });
+    const [result,setResult] = useState(null);
+    const [saving,setSaving] = useState(false);
+
+    const addRow = ()=>setRows(r=>[...r,emptyRow()]);
+    const removeRow = i=>setRows(r=>r.filter((_,idx)=>idx!==i));
+    const updateRow = (i,key,val)=>setRows(r=>r.map((row,idx)=>idx===i?{...row,[key]:val}:row));
+
+    const toggleGenType = (t)=>setGen(g=>({
+      ...g,
+      types: g.types.includes(t) ? g.types.filter(x=>x!==t) : [...g.types,t],
+    }));
+
+    const submitManual = async()=>{
+      if(!userId) return toast.error('User ID is required');
+      const transactions = rows
+        .filter(r=>r.amount&&r.type)
+        .map(r=>({
+          type:r.type,
+          amount:parseFloat(r.amount),
+          ...(r.description&&{description:r.description}),
+          ...(r.date&&{date:r.date}),
+          ...(r.reference&&{reference:r.reference}),
+        }));
+      if(!transactions.length) return toast.error('Add at least one transaction with an amount');
+      setSaving(true);
+      try{
+        const res = await api.post(`/admin/users/${userId}/transactions/bulk`,{transactions});
+        setResult(res.data);
+        toast.success(`${res.data.summary.created} of ${res.data.summary.total} created`);
+        fetchData();
+      }catch(err){
+        toast.error(err.response?.data?.message||'Failed');
+      }finally{
+        setSaving(false);
+      }
+    };
+
+    const submitGenerate = async()=>{
+      if(!userId) return toast.error('User ID is required');
+      if(!gen.startDate||!gen.endDate) return toast.error('Start and end date are required');
+      if(new Date(gen.startDate) > new Date(gen.endDate)) return toast.error('Start date must be before end date');
+      if(!gen.types.length) return toast.error('Select at least one transaction type');
+      const minC = parseInt(gen.minCount), maxC = parseInt(gen.maxCount);
+      if(!minC||!maxC||minC<1||maxC<minC) return toast.error('Check min/max count');
+      setSaving(true);
+      try{
+        const res = await api.post(`/admin/users/${userId}/transactions/generate-demo`,{
+          startDate:gen.startDate,
+          endDate:gen.endDate,
+          minCount:minC,
+          maxCount:maxC,
+          minAmount:parseFloat(gen.minAmount),
+          maxAmount:parseFloat(gen.maxAmount),
+          status:gen.status,
+          types:gen.types,
+        });
+        setResult(res.data);
+        toast.success(`${res.data.summary.created} of ${res.data.summary.total} demo transactions created`);
+        fetchData();
+      }catch(err){
+        toast.error(err.response?.data?.message||'Failed');
+      }finally{
+        setSaving(false);
+      }
+    };
+
+    const filledCount = rows.filter(r=>r.amount).length;
+
+    if(result) return (
+      <Modal title="Bulk Create Results" onClose={()=>setBulkTxModal(null)} wide>
+        <div className="grid grid-cols-3 gap-4 text-center mb-5 p-4 rounded-xl" style={{background:'var(--s3)',border:'1px solid var(--border)'}}>
+          <div><p className="font-display text-3xl font-bold text-white">{result.summary.total}</p><p className="text-xs mt-1" style={{color:'var(--t3)'}}>TOTAL</p></div>
+          <div><p className="font-display text-3xl font-bold" style={{color:'#4ade80'}}>{result.summary.created}</p><p className="text-xs mt-1" style={{color:'var(--t3)'}}>CREATED</p></div>
+          <div><p className="font-display text-3xl font-bold" style={{color:result.summary.failed>0?'#f87171':'var(--t3)'}}>{result.summary.failed}</p><p className="text-xs mt-1" style={{color:'var(--t3)'}}>FAILED</p></div>
+        </div>
+        {result.failed?.length>0&&(
+          <div className="mb-4">
+            <p className="text-xs font-semibold tracking-widest mb-2" style={{color:'#f87171'}}>FAILED ROWS</p>
+            <div className="space-y-2">
+              {result.failed.map((f,i)=>(
+                <div key={i} className="px-3 py-2 rounded-xl text-xs flex items-start gap-2" style={{background:'rgba(239,68,68,0.06)',border:'1px solid rgba(239,68,68,0.15)',color:'#f87171'}}>
+                  <span className="font-bold flex-shrink-0">{f.index!==undefined?`Row ${f.index+1}:`:''}</span>
+                  <span>{f.reason}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+        <button onClick={()=>setBulkTxModal(null)} className="btn-primary w-full py-2.5 rounded-xl text-sm">Done</button>
+      </Modal>
+    );
+
+    return (
+      <Modal title="Bulk Add Transactions" onClose={()=>setBulkTxModal(null)} wide>
+        <div className="mb-4">
+          <label className={lc} style={ls}>USER ID</label>
+          <input type="text" value={userId} onChange={e=>setUserId(e.target.value)} className={ic} placeholder="Paste user ID"/>
+        </div>
+
+        <div className="flex gap-2 mb-4 p-1 rounded-xl" style={{background:'var(--s3)',border:'1px solid var(--border)'}}>
+          <button onClick={()=>setMode('manual')} className="flex-1 py-2 rounded-lg text-xs font-semibold transition" style={mode==='manual'?{background:'#FF6A00',color:'#000'}:{color:'var(--t2)'}}>Manual Rows</button>
+          <button onClick={()=>setMode('generate')} className="flex-1 py-2 rounded-lg text-xs font-semibold transition" style={mode==='generate'?{background:'#FF6A00',color:'#000'}:{color:'var(--t2)'}}>Generate Demo Data</button>
+        </div>
+
+        {mode==='manual'?(
+          <>
+            <div className="space-y-2 mb-3" style={{maxHeight:360,overflowY:'auto'}}>
+              {rows.map((row,i)=>(
+                <div key={i} className="p-3 rounded-xl" style={{background:'var(--s3)',border:'1px solid var(--border)'}}>
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-xs font-semibold" style={{color:'var(--t3)'}}>ROW {i+1}</p>
+                    {rows.length>1&&<button onClick={()=>removeRow(i)} className="p-1 rounded-lg" style={{background:'rgba(239,68,68,0.1)',color:'#f87171'}}><X size={11}/></button>}
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 mb-2">
+                    <div>
+                      <label className={lc} style={ls}>TYPE</label>
+                      <select value={row.type} onChange={e=>updateRow(i,'type',e.target.value)} className="inp px-2 py-2 rounded-lg text-xs">
+                        {TX_TYPES.map(t=><option key={t}>{t}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label className={lc} style={ls}>AMOUNT ($) *</label>
+                      <input type="number" min="0.01" value={row.amount} onChange={e=>updateRow(i,'amount',e.target.value)} className={ic2} placeholder="0.00"/>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 mb-2">
+                    <div>
+                      <label className={lc} style={ls}>DESCRIPTION</label>
+                      <input type="text" value={row.description} onChange={e=>updateRow(i,'description',e.target.value)} className={ic2} placeholder="Note"/>
+                    </div>
+                    <div>
+                      <label className={lc} style={ls}>DATE</label>
+                      <input type="datetime-local" value={row.date} onChange={e=>updateRow(i,'date',e.target.value)} className={ic2}/>
+                    </div>
+                  </div>
+                  <div>
+                    <label className={lc} style={ls}>REFERENCE (OPTIONAL — auto-generated if blank)</label>
+                    <input type="text" value={row.reference} onChange={e=>updateRow(i,'reference',e.target.value)} className={ic2} placeholder="e.g. PAY-001"/>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <button onClick={addRow} className="btn-ghost w-full py-2 rounded-xl text-xs mb-4 flex items-center justify-center gap-2">
+              <Plus size={12}/>Add Another Row
+            </button>
+
+            <div className="flex gap-3">
+              <button onClick={()=>setBulkTxModal(null)} className="btn-ghost flex-1 py-2.5 rounded-xl text-sm">Cancel</button>
+              <button onClick={submitManual} disabled={saving} className="btn-primary flex-1 py-2.5 rounded-xl text-sm flex items-center justify-center gap-2">
+                {saving?'Creating...':<><Check size={13}/>Create {filledCount||rows.length} Tx</>}
+              </button>
+            </div>
+          </>
+        ):(
+          <>
+            <div className="p-3 rounded-xl mb-4 text-xs" style={{background:'rgba(255,106,0,0.06)',border:'1px solid rgba(255,106,0,0.15)',color:'rgba(255,106,0,0.85)'}}>
+              Randomly generates a batch of transactions spread across the date range below — for populating demo/staging accounts with realistic-looking history.
+            </div>
+
+            <div className="grid grid-cols-2 gap-3 mb-3">
+              <div><label className={lc} style={ls}>FROM DATE</label><input type="date" value={gen.startDate} onChange={e=>setGen({...gen,startDate:e.target.value})} className={ic}/></div>
+              <div><label className={lc} style={ls}>TO DATE</label><input type="date" value={gen.endDate} onChange={e=>setGen({...gen,endDate:e.target.value})} className={ic}/></div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3 mb-3">
+              <div><label className={lc} style={ls}>MIN COUNT</label><input type="number" min="1" value={gen.minCount} onChange={e=>setGen({...gen,minCount:e.target.value})} className={ic}/></div>
+              <div><label className={lc} style={ls}>MAX COUNT (≤500)</label><input type="number" min="1" max="500" value={gen.maxCount} onChange={e=>setGen({...gen,maxCount:e.target.value})} className={ic}/></div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3 mb-3">
+              <div><label className={lc} style={ls}>MIN AMOUNT ($)</label><input type="number" min="0.01" value={gen.minAmount} onChange={e=>setGen({...gen,minAmount:e.target.value})} className={ic}/></div>
+              <div><label className={lc} style={ls}>MAX AMOUNT ($)</label><input type="number" min="0.01" value={gen.maxAmount} onChange={e=>setGen({...gen,maxAmount:e.target.value})} className={ic}/></div>
+            </div>
+
+            <div className="mb-3"><label className={lc} style={ls}>STATUS</label>
+              <select value={gen.status} onChange={e=>setGen({...gen,status:e.target.value})} className="inp px-3 py-2.5 rounded-xl text-sm">
+                {['COMPLETED','PENDING'].map(s=><option key={s}>{s}</option>)}
+              </select>
+            </div>
+
+            <div className="mb-4">
+              <label className={lc} style={ls}>TRANSACTION TYPES TO INCLUDE</label>
+              <div className="flex flex-wrap gap-2">
+                {TX_TYPES.map(t=>(
+                  <button key={t} onClick={()=>toggleGenType(t)} className="px-2.5 py-1.5 rounded-lg text-xs font-medium transition" style={gen.types.includes(t)?{background:'rgba(255,106,0,0.15)',color:'#FF6A00',border:'1px solid rgba(255,106,0,0.3)'}:{background:'var(--s3)',color:'var(--t3)',border:'1px solid var(--border)'}}>
+                    {t}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex gap-3">
+              <button onClick={()=>setBulkTxModal(null)} className="btn-ghost flex-1 py-2.5 rounded-xl text-sm">Cancel</button>
+              <button onClick={submitGenerate} disabled={saving} className="btn-primary flex-1 py-2.5 rounded-xl text-sm flex items-center justify-center gap-2">
+                {saving?'Generating...':<><Zap size={13}/>Generate Demo Data</>}
+              </button>
+            </div>
+          </>
+        )}
       </Modal>
     );
   };
@@ -291,30 +512,88 @@ export default function AdminPage() {
   };
 
   const LoanModal = ()=>{
-    const [f,setF] = useState({status:'APPROVED',amount:loanModal?.amount||'',interestRate:loanModal?.interestRate||8.5,termMonths:loanModal?.termMonths||12,rejectionReason:'',approvedAt:'',collectedAt:''});
-    const save = ()=>action(()=>api.patch(`/admin/loans/${loanModal.id}/review`,{...f,disbursedAt:f.disbursedAt||undefined,collectedAt:f.collectedAt||undefined}),`Loan ${f.status.toLowerCase()}`).then(()=>setLoanModal(null));
+    const [f,setF] = useState({
+      status:loanModal?.status||'PENDING',
+      amount:loanModal?.amount||'',
+      interestRate:loanModal?.interestRate??8.5,
+      termMonths:loanModal?.termMonths||12,
+      amountRepaid:loanModal?.amountRepaid??0,
+      purpose:loanModal?.purpose||'',
+      rejectionReason:'',
+      approvedAt:'',
+      nextPaymentDate:'',
+    });
+    const save = ()=>action(()=>api.patch(`/admin/loans/${loanModal.id}`,f),`Loan updated`).then(()=>{
+      setLoanModal(null);
+      if(tab==='userdetail'&&selectedUser?.id===loanModal.userId) openUser(selectedUser.id);
+    });
     return (
-      <Modal title="Review Loan" onClose={()=>setLoanModal(null)}>
+      <Modal title="Edit Loan" onClose={()=>setLoanModal(null)}>
         <div className="p-3 rounded-xl mb-4" style={{background:'var(--s3)',border:'1px solid var(--border)'}}>
           <p className="text-xs text-white font-semibold">{loanModal?.user?.firstName} {loanModal?.user?.lastName}</p>
-          <p className="text-xs mt-0.5" style={{color:'rgba(255,255,255,0.35)'}}>Requested: ${loanModal?.amount?.toLocaleString()} • {loanModal?.purpose}</p>
+          <p className="text-xs mt-0.5" style={{color:'rgba(255,255,255,0.35)'}}>Current: ${loanModal?.amount?.toLocaleString()} • {loanModal?.purpose||'No purpose given'}</p>
         </div>
         <div className="space-y-3 mb-4">
-          <div><label className={lc} style={ls}>DECISION</label><select value={f.status} onChange={e=>setF({...f,status:e.target.value})} className="inp px-3 py-2.5 rounded-xl text-sm"><option value="APPROVED">APPROVE</option><option value="REJECTED">REJECT</option></select></div>
-          {f.status==='APPROVED'&&<>
-            <div className="grid grid-cols-3 gap-2">
-              <div><label className={lc} style={ls}>AMOUNT</label><input type="number" value={f.amount} onChange={e=>setF({...f,amount:e.target.value})} className={ic} placeholder={loanModal?.amount}/></div>
-              <div><label className={lc} style={ls}>RATE %</label><input type="number" step="0.1" value={f.interestRate} onChange={e=>setF({...f,interestRate:e.target.value})} className={ic}/></div>
-              <div><label className={lc} style={ls}>MONTHS</label><input type="number" value={f.termMonths} onChange={e=>setF({...f,termMonths:e.target.value})} className={ic}/></div>
-            </div>
-            <div className="grid grid-cols-2 gap-2">
-              <div><label className={lc} style={ls}>APPROVAL DATE</label><input type="datetime-local" value={f.approvedAt||''} onChange={e=>setF({...f,approvedAt:e.target.value})} className={ic}/><p className="text-xs mt-1" style={{color:'var(--t3)'}}>When loan was approved</p></div>
-              <div><label className={lc} style={ls}>COLLECTED DATE</label><input type="datetime-local" value={f.collectedAt||''} onChange={e=>setF({...f,collectedAt:e.target.value})} className={ic}/><p className="text-xs mt-1" style={{color:'var(--t3)'}}>When funds were disbursed</p></div>
-            </div>
-          </>}
-          {f.status==='REJECTED'&&<div><label className={lc} style={ls}>REASON</label><input type="text" value={f.rejectionReason} onChange={e=>setF({...f,rejectionReason:e.target.value})} className={ic} placeholder="Reason for rejection"/></div>}
+          <div><label className={lc} style={ls}>STATUS</label>
+            <select value={f.status} onChange={e=>setF({...f,status:e.target.value})} className="inp px-3 py-2.5 rounded-xl text-sm">
+              <option value="PENDING">PENDING</option>
+              <option value="ACTIVE">ACTIVE</option>
+              <option value="PAID">PAID</option>
+              <option value="REJECTED">REJECTED</option>
+            </select>
+          </div>
+          <div className="grid grid-cols-3 gap-2">
+            <div><label className={lc} style={ls}>AMOUNT</label><input type="number" value={f.amount} onChange={e=>setF({...f,amount:e.target.value})} className={ic}/></div>
+            <div><label className={lc} style={ls}>RATE %</label><input type="number" step="0.1" value={f.interestRate} onChange={e=>setF({...f,interestRate:e.target.value})} className={ic}/></div>
+            <div><label className={lc} style={ls}>MONTHS</label><input type="number" value={f.termMonths} onChange={e=>setF({...f,termMonths:e.target.value})} className={ic}/></div>
+          </div>
+          {f.status==='PAID'&&(
+            <div><label className={lc} style={ls}>AMOUNT REPAID ($) — leave blank to mark fully repaid</label><input type="number" value={f.amountRepaid} onChange={e=>setF({...f,amountRepaid:e.target.value})} className={ic} placeholder="Full amount"/></div>
+          )}
+          {f.status!=='PAID'&&(
+            <div><label className={lc} style={ls}>AMOUNT REPAID SO FAR ($)</label><input type="number" value={f.amountRepaid} onChange={e=>setF({...f,amountRepaid:e.target.value})} className={ic}/></div>
+          )}
+          <div className="grid grid-cols-2 gap-2">
+            <div><label className={lc} style={ls}>APPROVAL DATE</label><input type="datetime-local" value={f.approvedAt} onChange={e=>setF({...f,approvedAt:e.target.value})} className={ic}/></div>
+            <div><label className={lc} style={ls}>NEXT PAYMENT DATE</label><input type="datetime-local" value={f.nextPaymentDate} onChange={e=>setF({...f,nextPaymentDate:e.target.value})} className={ic}/></div>
+          </div>
+          <div><label className={lc} style={ls}>PURPOSE</label><input type="text" value={f.purpose} onChange={e=>setF({...f,purpose:e.target.value})} className={ic}/></div>
+          {f.status==='REJECTED'&&<div><label className={lc} style={ls}>REJECTION REASON</label><input type="text" value={f.rejectionReason} onChange={e=>setF({...f,rejectionReason:e.target.value})} className={ic} placeholder="Reason for rejection"/></div>}
         </div>
-        <div className="flex gap-3"><button onClick={()=>setLoanModal(null)} className="btn-ghost flex-1 py-2.5 rounded-xl text-sm">Cancel</button><button onClick={save} className={`flex-1 py-2.5 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 ${f.status==='APPROVED'?'btn-primary':' btn-danger'}`}>{f.status==='APPROVED'?<Check size={13}/>:<XCircle size={13}/>}{f.status==='APPROVED'?'Approve':'Reject'}</button></div>
+        <div className="flex gap-3"><button onClick={()=>setLoanModal(null)} className="btn-ghost flex-1 py-2.5 rounded-xl text-sm">Cancel</button><button onClick={save} className="btn-primary flex-1 py-2.5 rounded-xl text-sm flex items-center justify-center gap-2"><Save size={13}/>Save</button></div>
+      </Modal>
+    );
+  };
+
+  const CreateLoanModal = ()=>{
+    const [f,setF] = useState({
+      amount:'', interestRate:8.5, termMonths:12, purpose:'',
+      status:'PENDING', approvedAt:'', nextPaymentDate:'',
+    });
+    const save = ()=>action(()=>api.post(`/admin/users/${createLoanModal.userId}/loans`,f),'Loan created').then(()=>{
+      setCreateLoanModal(null);
+      if(tab==='userdetail'&&selectedUser?.id===createLoanModal.userId) openUser(selectedUser.id);
+    });
+    return (
+      <Modal title="Create Loan" onClose={()=>setCreateLoanModal(null)}>
+        <div className="space-y-3 mb-4">
+          <div><label className={lc} style={ls}>STATUS</label>
+            <select value={f.status} onChange={e=>setF({...f,status:e.target.value})} className="inp px-3 py-2.5 rounded-xl text-sm">
+              <option value="PENDING">PENDING</option>
+              <option value="ACTIVE">ACTIVE</option>
+              <option value="PAID">PAID</option>
+            </select>
+          </div>
+          <div className="grid grid-cols-3 gap-2">
+            <div><label className={lc} style={ls}>AMOUNT ($)</label><input type="number" min="0.01" value={f.amount} onChange={e=>setF({...f,amount:e.target.value})} className={ic} placeholder="0.00"/></div>
+            <div><label className={lc} style={ls}>RATE %</label><input type="number" step="0.1" value={f.interestRate} onChange={e=>setF({...f,interestRate:e.target.value})} className={ic}/></div>
+            <div><label className={lc} style={ls}>MONTHS</label><input type="number" value={f.termMonths} onChange={e=>setF({...f,termMonths:e.target.value})} className={ic}/></div>
+          </div>
+          {f.status==='ACTIVE'&&<div><label className={lc} style={ls}>APPROVAL DATE (OPTIONAL — defaults to now)</label><input type="datetime-local" value={f.approvedAt} onChange={e=>setF({...f,approvedAt:e.target.value})} className={ic}/></div>}
+          <div><label className={lc} style={ls}>NEXT PAYMENT DATE</label><input type="datetime-local" value={f.nextPaymentDate} onChange={e=>setF({...f,nextPaymentDate:e.target.value})} className={ic}/></div>
+          <div><label className={lc} style={ls}>PURPOSE</label><input type="text" value={f.purpose} onChange={e=>setF({...f,purpose:e.target.value})} className={ic} placeholder="e.g. Home renovation"/></div>
+        </div>
+        <div className="flex gap-3"><button onClick={()=>setCreateLoanModal(null)} className="btn-ghost flex-1 py-2.5 rounded-xl text-sm">Cancel</button><button onClick={save} className="btn-primary flex-1 py-2.5 rounded-xl text-sm flex items-center justify-center gap-2"><Plus size={13}/>Create Loan</button></div>
       </Modal>
     );
   };
@@ -369,7 +648,8 @@ export default function AdminPage() {
     );
   };
 
-  // ── TABS CONTENT ──────────────────────────────────────────────────
+  // ── TABS ──────────────────────────────────────────────────────────
+
   const Dashboard = ()=>{
     const s = data.stats;
     if(!s) return <div className="p-8 text-center" style={{color:'var(--t3)'}}>Loading...</div>;
@@ -454,17 +734,17 @@ export default function AdminPage() {
         <div className="flex gap-2 flex-wrap">
           <button onClick={()=>setZelleModal({})} className="btn-ghost flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs"><Zap size={12}/>Zelle</button>
           <button onClick={()=>setCashModal({})} className="btn-ghost flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs"><Smartphone size={12}/>CashApp</button>
-          <button onClick={()=>setAddTxModal(true)} className="btn-primary flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs"><Plus size={12}/>Add Tx</button>
+          <button onClick={()=>setAddTxModal(true)} className="btn-ghost flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs"><Plus size={12}/>Add Tx</button>
+          <button onClick={()=>setBulkTxModal({})} className="btn-primary flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs"><Plus size={12}/>Bulk Add</button>
         </div>
       </div>
 
-      {/* Advanced filters */}
       <div className="card p-4">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <div><label className="block text-xs font-semibold tracking-widest mb-1" style={{color:'var(--t3)'}}>TYPE</label>
             <select value={txFilters.type} onChange={e=>setTxFilters({...txFilters,type:e.target.value})} className="inp px-2 py-2 rounded-lg text-xs">
               <option value="">All Types</option>
-              {['DEPOSIT','WITHDRAWAL','TRANSFER','ZELLE','CASHAPP','BILL_PAYMENT','LOAN_DISBURSEMENT','LOAN_REPAYMENT','MOBILE_DEPOSIT'].map(t=><option key={t}>{t}</option>)}
+              {TX_TYPES.map(t=><option key={t}>{t}</option>)}
             </select>
           </div>
           <div><label className="block text-xs font-semibold tracking-widest mb-1" style={{color:'var(--t3)'}}>STATUS</label>
@@ -527,7 +807,7 @@ export default function AdminPage() {
               <td style={{fontSize:12}}><span style={{color:'#4ade80'}}>${l.amountRepaid?.toFixed(2)}</span><span style={{color:'var(--t3)'}}> / ${l.totalRepayable?.toFixed(2)}</span></td>
               <td style={{color:'var(--t2)',fontSize:12,maxWidth:120}} className="truncate">{l.purpose||'—'}</td>
               <td><Badge type={l.status==='ACTIVE'?'green':l.status==='PAID'?'blue':l.status==='PENDING'?'yellow':'red'}>{l.status}</Badge></td>
-              <td>{l.status==='PENDING'&&<button onClick={()=>setLoanModal(l)} className="btn-primary px-3 py-1.5 rounded-lg text-xs">Review</button>}</td>
+              <td><button onClick={()=>setLoanModal(l)} className="btn-primary px-3 py-1.5 rounded-lg text-xs">{l.status==='PENDING'?'Review':'Edit'}</button></td>
             </tr>
           ))}
         </tbody>
@@ -604,14 +884,28 @@ export default function AdminPage() {
     if(!selectedUser) return null;
     const u = selectedUser;
     const totalBal = (u.accounts||[]).reduce((s,a)=>s+a.balance,0);
+
+    // ── Per-user transaction history (separate from the global TxTab list) ──
+    const [txList,setTxList] = useState([]);
+    const [txLoading,setTxLoading] = useState(true);
+    const fetchUserTx = useCallback(async()=>{
+      setTxLoading(true);
+      try{
+        const r = await api.get(`/admin/transactions?userId=${u.id}&limit=100`);
+        setTxList(r.data.data.transactions||[]);
+      }catch{ toast.error('Failed to load transaction history'); }
+      finally{ setTxLoading(false); }
+    },[u.id]);
+    // Refetch whenever the user changes, or any tx-affecting modal opens/closes
+    useEffect(()=>{ fetchUserTx(); },[fetchUserTx, editTxModal, bulkTxModal, addTxModal, balanceModal]);
+    const txAction = async(fn,msg)=>{ try{ await fn(); toast.success(msg); fetchUserTx(); }catch(err){ toast.error(err.response?.data?.message||'Failed'); } };
+
     return (
       <div className="space-y-5">
         <div className="flex items-center gap-3 mb-2">
           <button onClick={()=>setTab('users')} className="btn-ghost p-2 rounded-xl text-xs">← Back</button>
           <div><p className="text-xs font-semibold tracking-widest" style={{color:'rgba(255,106,0,0.7)'}}>CLIENT PROFILE</p><h1 className="font-display text-xl font-bold text-white mt-0.5">{u.firstName} {u.lastName}</h1></div>
         </div>
-
-        {/* Header card */}
         <div className="card p-5 flex flex-col sm:flex-row sm:items-start gap-4">
           <div className="w-12 h-12 rounded-2xl flex items-center justify-center text-lg font-bold flex-shrink-0" style={{background:'rgba(255,106,0,0.15)',color:'#FF6A00'}}>{u.firstName?.[0]}{u.lastName?.[0]}</div>
           <div className="flex-1">
@@ -628,13 +922,13 @@ export default function AdminPage() {
             <button onClick={()=>setEditUser(u)} className="btn-ghost px-3 py-2 rounded-xl text-xs flex items-center gap-1.5"><Edit2 size={12}/>Edit</button>
             <button onClick={()=>setBalanceModal({userId:u.id,name:`${u.firstName} ${u.lastName}`,balance:u.accounts?.[0]?.balance||0,accountId:u.accounts?.[0]?.id||'',accounts:u.accounts})} className="btn-primary px-3 py-2 rounded-xl text-xs flex items-center gap-1.5"><DollarSign size={12}/>Balance</button>
             <button onClick={()=>setAddTxModal(true)} className="btn-ghost px-3 py-2 rounded-xl text-xs flex items-center gap-1.5"><Plus size={12}/>Add Tx</button>
+            <button onClick={()=>setBulkTxModal({userId:u.id})} className="btn-ghost px-3 py-2 rounded-xl text-xs flex items-center gap-1.5" style={{background:'rgba(255,106,0,0.1)',color:'#FF6A00'}}><Plus size={12}/>Bulk Tx</button>
             <button onClick={()=>setZelleModal({userId:u.id})} className="btn-ghost px-3 py-2 rounded-xl text-xs flex items-center gap-1.5"><Zap size={12}/>Zelle</button>
             <button onClick={()=>setCashModal({userId:u.id})} className="btn-ghost px-3 py-2 rounded-xl text-xs flex items-center gap-1.5"><Smartphone size={12}/>CashApp</button>
             <button onClick={()=>setCreateAccModal(u.id)} className="btn-ghost px-3 py-2 rounded-xl text-xs flex items-center gap-1.5"><Plus size={12}/>Account</button>
           </div>
         </div>
 
-        {/* Accounts */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           {(u.accounts||[]).map(a=>(
             <div key={a.id} className="card p-4">
@@ -645,13 +939,49 @@ export default function AdminPage() {
           ))}
         </div>
 
-        {/* Loans */}
-        {(u.loansAsDebtor||[]).length>0&&(
-          <div className="card overflow-hidden">
-            <div className="px-5 py-3" style={{borderBottom:'1px solid var(--border)'}}><h3 className="font-display font-semibold text-sm" style={{color:'var(--t1)'}}>Loans</h3></div>
+        <div className="card overflow-hidden">
+          <div className="px-5 py-3 flex items-center justify-between" style={{borderBottom:'1px solid var(--border)'}}>
+            <h3 className="font-display font-semibold text-sm" style={{color:'var(--t1)'}}>Transaction History</h3>
+            <div className="flex gap-2">
+              <button onClick={()=>setAddTxModal(true)} className="btn-ghost px-2.5 py-1.5 rounded-lg text-xs flex items-center gap-1"><Plus size={11}/>Add Tx</button>
+              <button onClick={()=>setBulkTxModal({userId:u.id})} className="btn-ghost px-2.5 py-1.5 rounded-lg text-xs flex items-center gap-1" style={{background:'rgba(255,106,0,0.1)',color:'#FF6A00'}}><Plus size={11}/>Bulk / Generate</button>
+            </div>
+          </div>
+          <div className="overflow-x-auto"><table className="tbl">
+            <thead><tr><th>Ref</th><th>Type</th><th>Amount</th><th>Flagged</th><th>Status</th><th>Date</th><th>Actions</th></tr></thead>
+            <tbody>
+              {txLoading?<tr><td colSpan={7} className="text-center py-8" style={{color:'var(--t3)'}}>Loading...</td></tr>
+              :txList.length===0?<tr><td colSpan={7} className="text-center py-8" style={{color:'var(--t3)'}}>No transactions yet</td></tr>
+              :txList.map(tx=>(
+                <tr key={tx.id}>
+                  <td className="font-mono" style={{fontSize:11,color:'var(--t3)'}}>{tx.reference?.slice(0,8)}...</td>
+                  <td><Badge type="gray">{tx.type}</Badge></td>
+                  <td className="font-semibold" style={{color:'var(--t1)'}}>${tx.amount?.toFixed(2)}</td>
+                  <td>{tx.flagged?<span style={{color:'#f87171',fontSize:11}}>⚠ Yes</span>:<span style={{color:'var(--t3)',fontSize:11}}>—</span>}</td>
+                  <td><Badge type={tx.status==='COMPLETED'?'green':tx.status==='REVERSED'?'blue':'yellow'}>{tx.status}</Badge></td>
+                  <td style={{color:'var(--t3)',fontSize:11,whiteSpace:'nowrap'}}>{format(new Date(tx.createdAt),'MMM d, HH:mm')}</td>
+                  <td><div className="flex gap-1">
+                    <button onClick={()=>setEditTxModal(tx)} className="p-1.5 rounded-lg" style={{background:'var(--s3)',color:'var(--t2)'}} title="Edit"><Edit2 size={11}/></button>
+                    {tx.type==='TRANSFER'&&tx.status==='COMPLETED'&&<button onClick={()=>txAction(()=>api.patch(`/admin/transactions/${tx.id}/reverse`),'Reversed')} className="p-1.5 rounded-lg" style={{background:'rgba(99,102,241,0.1)',color:'#818cf8'}} title="Reverse"><RotateCcw size={11}/></button>}
+                    <button onClick={()=>{ if(confirm('Delete this transaction?')) txAction(()=>api.delete(`/admin/transactions/${tx.id}`),'Deleted'); }} className="p-1.5 rounded-lg" style={{background:'rgba(239,68,68,0.1)',color:'#f87171'}} title="Delete"><Trash2 size={11}/></button>
+                  </div></td>
+                </tr>
+              ))}
+            </tbody>
+          </table></div>
+        </div>
+
+        <div className="card overflow-hidden">
+          <div className="px-5 py-3 flex items-center justify-between" style={{borderBottom:'1px solid var(--border)'}}>
+            <h3 className="font-display font-semibold text-sm" style={{color:'var(--t1)'}}>Loans</h3>
+            <button onClick={()=>setCreateLoanModal({userId:u.id})} className="btn-ghost px-2.5 py-1.5 rounded-lg text-xs flex items-center gap-1" style={{background:'rgba(255,106,0,0.1)',color:'#FF6A00'}}><Plus size={11}/>New Loan</button>
+          </div>
+          {(u.loans||[]).length===0?(
+            <div className="py-8 text-center text-xs" style={{color:'var(--t3)'}}>No loans yet</div>
+          ):(
             <div className="overflow-x-auto"><table className="tbl">
               <thead><tr><th>Amount</th><th>Rate</th><th>Term</th><th>Disbursed</th><th>Next Payment</th><th>Repaid</th><th>Status</th><th>Actions</th></tr></thead>
-              <tbody>{u.loansAsDebtor.map(l=>(
+              <tbody>{(u.loans||[]).map(l=>(
                 <tr key={l.id}>
                   <td className="font-semibold" style={{color:'var(--t1)'}}>${l.amount?.toLocaleString()}</td>
                   <td style={{fontSize:12,color:'var(--t2)'}}>{l.interestRate}%</td>
@@ -660,20 +990,13 @@ export default function AdminPage() {
                   <td style={{fontSize:11,color:'var(--t3)'}}>{l.nextPaymentDate?format(new Date(l.nextPaymentDate),'MMM d, yyyy'):'—'}</td>
                   <td style={{fontSize:12}}><span style={{color:'#22c55e'}}>${l.amountRepaid?.toFixed(2)}</span><span style={{color:'var(--t3)'}}> / ${l.totalRepayable?.toFixed(2)}</span></td>
                   <td><Badge type={l.status==='ACTIVE'?'green':l.status==='PAID'?'blue':l.status==='PENDING'?'yellow':'red'}>{l.status}</Badge></td>
-                  <td>
-                    <div className="flex gap-1">
-                      <button onClick={()=>setLoanModal(l)} className="px-2 py-1 rounded-lg text-xs font-semibold transition" style={{background:'var(--orangeD)',color:'var(--orange)',border:'1px solid rgba(255,106,0,0.2)'}}>
-                        {l.status==='PENDING'?'Review':'Edit'}
-                      </button>
-                    </div>
-                  </td>
+                  <td><button onClick={()=>setLoanModal(l)} className="px-2 py-1 rounded-lg text-xs font-semibold" style={{background:'var(--orangeD)',color:'var(--orange)',border:'1px solid rgba(255,106,0,0.2)'}}>Edit</button></td>
                 </tr>
               ))}</tbody>
             </table></div>
-          </div>
-        )}
+          )}
+        </div>
 
-        {/* Zelle */}
         {(u.zelleTransfers||[]).length>0&&(
           <div className="card overflow-hidden">
             <div className="px-5 py-3" style={{borderBottom:'1px solid var(--border)'}}><h3 className="font-display font-semibold text-sm" style={{color:'var(--t1)'}}>Zelle History</h3></div>
@@ -693,7 +1016,6 @@ export default function AdminPage() {
           </div>
         )}
 
-        {/* CashApp */}
         {(u.cashAppTransfers||[]).length>0&&(
           <div className="card overflow-hidden">
             <div className="px-5 py-3" style={{borderBottom:'1px solid var(--border)'}}><h3 className="font-display font-semibold text-sm" style={{color:'var(--t1)'}}>Cash App History</h3></div>
@@ -712,7 +1034,6 @@ export default function AdminPage() {
           </div>
         )}
 
-        {/* Bill Payments */}
         {(u.billPayments||[]).length>0&&(
           <div className="card overflow-hidden">
             <div className="px-5 py-3" style={{borderBottom:'1px solid var(--border)'}}><h3 className="font-display font-semibold text-sm" style={{color:'var(--t1)'}}>Bill Payments</h3></div>
@@ -734,21 +1055,30 @@ export default function AdminPage() {
     );
   };
 
+  const CURRENCIES = [
+    {code:'USD', label:'USD — US Dollar'},
+    {code:'EUR', label:'EUR — Euro'},
+    {code:'GBP', label:'GBP — British Pound'},
+    {code:'CAD', label:'CAD — Canadian Dollar'},
+    {code:'AUD', label:'AUD — Australian Dollar'},
+    {code:'JPY', label:'JPY — Japanese Yen'},
+  ];
+
   const CreateAccModal = ()=>{
-    const [f,setF] = useState({accountType:'SAVINGS',balance:0});
+    const [f,setF] = useState({accountType:'SAVINGS',balance:0,currency:'USD'});
     const save = ()=>action(()=>api.post(`/admin/users/${createAccModal}/accounts`,f),'Account created').then(()=>setCreateAccModal(null));
     return (
       <Modal title="Create Account" onClose={()=>setCreateAccModal(null)}>
         <div className="space-y-3 mb-4">
           <div><label className={lc} style={ls}>TYPE</label><select value={f.accountType} onChange={e=>setF({...f,accountType:e.target.value})} className="inp px-3 py-2.5 rounded-xl text-sm"><option>CHECKING</option><option>SAVINGS</option><option>INVESTMENT</option></select></div>
-          <div><label className={lc} style={ls}>OPENING BALANCE ($)</label><input type="number" min="0" value={f.balance} onChange={e=>setF({...f,balance:e.target.value})} className={ic} placeholder="0.00"/></div>
+          <div><label className={lc} style={ls}>CURRENCY</label><select value={f.currency} onChange={e=>setF({...f,currency:e.target.value})} className="inp px-3 py-2.5 rounded-xl text-sm">{CURRENCIES.map(c=><option key={c.code} value={c.code}>{c.label}</option>)}</select></div>
+          <div><label className={lc} style={ls}>OPENING BALANCE</label><input type="number" min="0" value={f.balance} onChange={e=>setF({...f,balance:e.target.value})} className={ic} placeholder="0.00"/></div>
         </div>
         <div className="flex gap-3"><button onClick={()=>setCreateAccModal(null)} className="btn-ghost flex-1 py-2.5 rounded-xl text-sm">Cancel</button><button onClick={save} className="btn-primary flex-1 py-2.5 rounded-xl text-sm">Create</button></div>
       </Modal>
     );
   };
 
-  // ── RESET PASSWORD MODAL ──────────────────────────────────────────
   const ResetPassModal = ()=>{
     const [newPass, setNewPass] = useState('');
     const [show, setShow] = useState(false);
@@ -775,17 +1105,12 @@ export default function AdminPage() {
     );
   };
 
-
   const CardsTab = ()=>{
     const approveCard = (id) => action(() => api.patch(`/cards/admin/${id}/approve`), 'Card approved!');
     const rejectCard = async (id) => {
       const reason = prompt('Rejection reason:');
       if (reason === null) return;
       action(() => api.patch(`/cards/admin/${id}/reject`, { reason }), 'Card rejected');
-    };
-    const statusBadge = (s) => {
-      const map = { PENDING:'badge-yellow', ACTIVE:'badge-green', FROZEN:'badge-blue', REJECTED:'badge-red', CANCELLED:'badge-gray' };
-      return <Badge type={map[s]||'gray'}>{s}</Badge>;
     };
     return (
       <div className="space-y-4">
@@ -801,7 +1126,7 @@ export default function AdminPage() {
                 <td><Badge type="gray">{c.type}</Badge></td>
                 <td style={{color:'var(--t2)',fontSize:12}}>{c.network}</td>
                 <td style={{fontSize:11,color:'var(--t3)',fontFamily:'monospace'}}>{c.account?.accountNumber}</td>
-                <td>{statusBadge(c.status)}</td>
+                <td><Badge type={c.status==='ACTIVE'?'green':c.status==='FROZEN'?'blue':c.status==='REJECTED'?'red':'yellow'}>{c.status}</Badge></td>
                 <td style={{fontSize:11,color:'var(--t3)',whiteSpace:'nowrap'}}>{format(new Date(c.createdAt),'MMM d, yyyy')}</td>
                 <td>{c.status==='PENDING'&&<div className="flex gap-2">
                   <button onClick={()=>approveCard(c.id)} className="px-3 py-1.5 rounded-lg text-xs font-semibold" style={{background:'rgba(34,197,94,0.12)',color:'#4ade80',border:'1px solid rgba(34,197,94,0.2)'}}>Approve</button>
@@ -819,10 +1144,8 @@ export default function AdminPage() {
 
   return (
     <div className="flex h-screen" style={{background:'var(--bg)'}}>
-      {/* Desktop sidebar */}
       <div className="hidden lg:flex flex-col w-56 flex-shrink-0"><Sidebar/></div>
 
-      {/* Mobile sidebar */}
       {sideOpen&&(
         <div className="lg:hidden fixed inset-0 z-50 flex">
           <div className="fixed inset-0" style={{background:'rgba(0,0,0,0.8)',backdropFilter:'blur(4px)'}} onClick={()=>setSideOpen(false)}/>
@@ -832,7 +1155,6 @@ export default function AdminPage() {
       )}
 
       <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Mobile header */}
         <div className="lg:hidden flex items-center justify-between px-4 py-3" style={{background:'#0F0F0F',borderBottom:'1px solid var(--border)'}}>
           <button onClick={()=>setSideOpen(true)} className="p-2 rounded-xl" style={{color:'var(--t2)',background:'var(--s3)'}}><Menu size={18}/></button>
           <div className="flex items-center gap-2"><div className="w-6 h-6 rounded-lg flex items-center justify-center" style={{background:'#FF6A00'}}><Shield size={12} color="#000"/></div><span className="font-display font-bold text-white text-sm">ADMIN</span></div>
@@ -843,6 +1165,7 @@ export default function AdminPage() {
 
       {/* Modals */}
       {editUser&&<EditUserModal/>}
+      {resetPassModal&&<ResetPassModal/>}
       {resetPassModal&&(
         <ResetPasswordModal user={resetPassModal} onClose={()=>setResetPassModal(null)} onDone={()=>{setResetPassModal(null);fetchData();}}/>
       )}
@@ -852,11 +1175,12 @@ export default function AdminPage() {
       {balanceModal&&<BalanceModal/>}
       {addTxModal&&<AddTxModal/>}
       {editTxModal&&<EditTxModal/>}
+      {bulkTxModal&&<BulkTxModal/>}
       {zelleModal&&<ZelleModal/>}
       {cashModal&&<CashModal/>}
       {loanModal&&<LoanModal/>}
+      {createLoanModal&&<CreateLoanModal/>}
       {createAccModal&&<CreateAccModal/>}
-      {resetPassModal&&<ResetPassModal/>}
     </div>
   );
 }
