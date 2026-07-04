@@ -1,351 +1,638 @@
 'use client';
-import { useState, useEffect } from 'react';
-import { useAuth } from '../../context/AuthContext';
-import api from '../../lib/api';
-import toast from 'react-hot-toast';
-import {
-  ArrowUpRight, ArrowDownLeft, ArrowLeftRight, Send, Plus,
-  Download, Eye, EyeOff, RefreshCw, TrendingUp, Landmark,
-  DollarSign, PiggyBank, BarChart2, Zap, Smartphone, Camera, Trash2
-} from 'lucide-react';
-import { format } from 'date-fns';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
-import { AreaChart, Area, XAxis, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
+import { Shield, ArrowRight, Lock, Globe, BarChart2, Users, Phone, Mail, MapPin, Menu, X, DollarSign, PiggyBank, TrendingUp, CheckCircle2, Briefcase, CreditCard, Receipt, Landmark, Wifi, ShieldCheck } from 'lucide-react';
 
-const chartData = [
-  {m:'Aug',i:3200,o:1800},{m:'Sep',i:4100,o:2200},{m:'Oct',i:3800,o:2900},
-  {m:'Nov',i:5200,o:2100},{m:'Dec',i:4600,o:3300},{m:'Jan',i:6100,o:2800},
+const CARD_TIERS = [
+  {
+    tier: 'BLACK',
+    name: 'Nova Black Rewards',
+    gradient: 'linear-gradient(135deg, #000000 0%, #1a1a1a 55%, #000000 100%)',
+    accent: '#FF6A00',
+    textColor: '#F5F3EF',
+    stat: '6', statUnit: '%',
+    caption: 'cash back offer',
+    sub: 'No annual fee.',
+    bonus: '$300 online bonus offer',
+  },
+  {
+    tier: 'PLATINUM',
+    name: 'Nova Platinum Cash',
+    gradient: 'linear-gradient(135deg, #3a3a3a 0%, #6b6b6b 55%, #3a3a3a 100%)',
+    accent: '#FF6A00',
+    textColor: '#F5F3EF',
+    stat: '2', statUnit: '%',
+    caption: 'unlimited cash back',
+    sub: 'No annual fee.',
+    bonus: '$200 online bonus offer',
+  },
+  {
+    tier: 'GOLD',
+    name: 'Nova Gold Points',
+    gradient: 'linear-gradient(135deg, #7a4a12 0%, #FF6A00 55%, #7a4a12 100%)',
+    accent: '#0B0B0C',
+    textColor: '#0B0B0C',
+    stat: '1.5', statUnit: '',
+    caption: 'points for every $1',
+    sub: 'No annual fee.',
+    bonus: '25,000 bonus points offer',
+  },
+  {
+    tier: 'STANDARD',
+    name: 'Nova Standard Card',
+    gradient: 'linear-gradient(135deg, #1a1a1a 0%, #2b2b2b 55%, #1a1a1a 100%)',
+    accent: '#FF6A00',
+    textColor: '#F5F3EF',
+    stat: '0', statUnit: '%',
+    caption: 'intro APR offer',
+    sub: 'No annual fee.',
+    bonus: 'Intro APR for 15 billing cycles',
+    badge: 'NEW OFFER',
+  },
 ];
 
-const ACCOUNT_ICONS  = { CHECKING: DollarSign, SAVINGS: PiggyBank, INVESTMENT: BarChart2 };
-const ACCOUNT_COLORS = { CHECKING: '#FF6A00', SAVINGS: '#22c55e', INVESTMENT: '#6366f1' };
+const NAV_ITEMS = [
+  { label:'Personal Banking', href:'#services' },
+  { label:'Business',         href:'#business' },
+  { label:'Security',         href:'#security' },
+  { label:'About',            href:'#about'    },
+];
 
-export default function DashboardPage() {
-  const { user } = useAuth();
-  const [accounts, setAccounts]         = useState([]);
-  const [transactions, setTransactions] = useState([]);
-  const [loading, setLoading]           = useState(true);
-  const [balanceVisible, setBalanceVisible] = useState(true);
-  const [modal, setModal]               = useState(null);
-  const [amount, setAmount]             = useState('');
-  const [selectedAccount, setSelectedAccount] = useState('');
-  const [actionLoading, setActionLoading] = useState(false);
-  const [creatingAccount, setCreatingAccount] = useState(false);
+const SERVICES = [
+  {
+    type: 'CHECKING',
+    icon: DollarSign,
+    color: '#FF6A00',
+    title: 'Private Checking',
+    desc: 'Everyday banking with no fees, real-time transfers, and a dedicated relationship manager.',
+    points: ['No monthly fees', 'Free virtual & physical cards', 'Same-day domestic transfers'],
+  },
+  {
+    type: 'SAVINGS',
+    icon: PiggyBank,
+    color: '#22c55e',
+    title: 'High-Yield Savings',
+    desc: 'Put idle capital to work with rates well above the national average.',
+    points: ['2.5% APY', 'No minimum balance', 'Instant transfers to Checking'],
+  },
+  {
+    type: 'INVESTMENT',
+    icon: TrendingUp,
+    color: '#6366f1',
+    title: 'Managed Investment',
+    desc: 'A dedicated portfolio account, actively managed alongside your banking.',
+    points: ['7.0% target APY', 'Quarterly performance reviews', 'Licensed advisor access'],
+  },
+];
 
-  useEffect(() => { fetchData(); }, []);
+const BUSINESS_SERVICES = [
+  {
+    icon: Briefcase,
+    title: 'Business Checking',
+    desc: 'Dedicated operating accounts with same-day transfers and no hidden fees, built for companies that move money daily.',
+  },
+  {
+    icon: CreditCard,
+    title: 'Merchant Services',
+    desc: 'Accept payments in-store and online with transparent processing rates and next-day settlement.',
+  },
+  {
+    icon: Receipt,
+    title: 'Payroll & Disbursements',
+    desc: 'Run payroll, pay vendors, and manage recurring disbursements from a single dashboard.',
+  },
+  {
+    icon: Landmark,
+    title: 'Business Lines of Credit',
+    desc: 'Flexible credit lines sized to your business, reviewed by a dedicated commercial banker.',
+  },
+];
 
-  const fetchData = async () => {
-    setLoading(true);
-    try {
-      const [accRes, txRes] = await Promise.all([
-        api.get('/account'),
-        api.get('/transactions?limit=8'),
-      ]);
-      setAccounts(accRes.data.data);
-      setTransactions(txRes.data.data.transactions);
-      if (accRes.data.data.length > 0) setSelectedAccount(accRes.data.data[0].id);
-    } catch { toast.error('Failed to load'); }
-    finally { setLoading(false); }
-  };
+const STATS = [
+  { v:'$2.4B+',  l:'Assets Managed' },
+  { v:'99.99%',  l:'Platform Uptime' },
+  { v:'256-bit', l:'Encryption' },
+  { v:'24/7',    l:'Advisor Access' },
+];
 
-  const totalBalance = accounts.reduce((s, a) => s + a.balance, 0);
+// Parses a stat string like "$2.4B+" or "12,400+" into animatable parts.
+// Returns null for non-numeric strings (e.g. "A+"), which fall back to a plain fade-in.
+const parseStat = (str) => {
+  const m = String(str).match(/^([^\d]*)([\d,.]+)(.*)$/);
+  if (!m) return null;
+  const [, prefix, numStr, suffix] = m;
+  const decimals = numStr.includes('.') ? numStr.split('.')[1].length : 0;
+  const num = parseFloat(numStr.replace(/,/g, ''));
+  if (isNaN(num)) return null;
+  return { prefix, num, decimals, suffix };
+};
 
-  const handleAction = async () => {
-    if (!amount || parseFloat(amount) <= 0) return toast.error('Enter a valid amount');
-    setActionLoading(true);
-    try {
-      await api.post(`/transactions/${modal}`, { amount: parseFloat(amount) });
-      toast.success(`${modal === 'deposit' ? 'Deposit' : 'Withdrawal'} successful`);
-      setModal(null); setAmount(''); fetchData();
-    } catch (err) { toast.error(err.response?.data?.message || 'Failed'); }
-    finally { setActionLoading(false); }
-  };
+// Scroll-triggered fade + rise wrapper. Fires once, first time the element
+// enters the viewport (including immediately on load, if already in view).
+function Reveal({ children, delay = 0, style = {}, className = '' }) {
+  const ref = useRef(null);
+  const [visible, setVisible] = useState(false);
 
-  const createAccount = async (type) => {
-    setCreatingAccount(type);
-    try { await api.post('/account', { accountType: type }); toast.success(`${type} account created!`); fetchData(); }
-    catch (err) { toast.error(err.response?.data?.message || 'Failed'); }
-    finally { setCreatingAccount(false); }
-  };
-
-  const deleteAccount = async (acc) => {
-    if (!confirm(`Remove ${acc.accountType} account (${acc.accountNumber})? Balance must be $0.\n\nThis will not affect transaction history.`)) return;
-    try {
-      await api.delete(`/account/${acc.id}`);
-      toast.success(`${acc.accountType} account removed`);
-      fetchData();
-    } catch (err) { toast.error(err.response?.data?.message || 'Failed to remove account'); }
-  };
-
-  const isCredit = (tx) => tx.toAccount?.userId === user?.id || ['DEPOSIT','LOAN_DISBURSEMENT','MOBILE_DEPOSIT'].includes(tx.type);
-
-  const txIcon = (type) => {
-    const s = { color: 'var(--t3)' };
-    if (type === 'ZELLE')    return <Zap size={13} style={s} />;
-    if (type === 'CASHAPP')  return <Smartphone size={13} style={s} />;
-    if (['DEPOSIT','LOAN_DISBURSEMENT','MOBILE_DEPOSIT'].includes(type)) return <ArrowDownLeft size={13} style={{color:'#22c55e'}} />;
-    return <ArrowUpRight size={13} style={{color:'#ef4444'}} />;
-  };
-
-  const missingTypes = ['CHECKING','SAVINGS','INVESTMENT'].filter(t => !accounts.find(a => a.accountType === t));
-
-  const Modal = () => (
-    <div className="modal-wrap">
-      <div className="modal">
-        <h3 className="font-display font-bold text-lg mb-1" style={{color:'var(--t1)'}}>
-          {modal === 'deposit' ? 'Deposit Funds' : 'Withdraw Funds'}
-        </h3>
-        <p className="text-xs mb-4" style={{color:'var(--t3)'}}>
-          Balance: <span style={{color:'var(--t2)'}}>${accounts[0]?.balance?.toFixed(2)}</span>
-        </p>
-        {accounts.length > 1 && (
-          <select value={selectedAccount} onChange={e => setSelectedAccount(e.target.value)}
-            className="inp px-3 py-2.5 rounded-xl text-sm mb-4">
-            {accounts.map(a => <option key={a.id} value={a.id}>{a.accountType} — ${a.balance.toFixed(2)}</option>)}
-          </select>
-        )}
-        <div className="relative mb-5">
-          <span className="absolute left-4 top-1/2 -translate-y-1/2 text-2xl font-bold" style={{color:'var(--t3)'}}>$</span>
-          <input type="number" min="1" value={amount} onChange={e => setAmount(e.target.value)}
-            className="inp pl-10 pr-4 py-4 rounded-xl text-2xl font-bold" placeholder="0.00" autoFocus />
-        </div>
-        <div className="flex gap-3">
-          <button onClick={() => { setModal(null); setAmount(''); }} className="btn-ghost flex-1 py-3 rounded-xl text-sm">Cancel</button>
-          <button onClick={handleAction} disabled={actionLoading}
-            className="flex-1 py-3 rounded-xl text-sm font-semibold transition disabled:opacity-50"
-            style={{
-              background: modal === 'deposit' ? 'rgba(34,197,94,0.15)' : 'rgba(239,68,68,0.15)',
-              color:      modal === 'deposit' ? '#16a34a' : '#dc2626',
-              border:     `1px solid ${modal === 'deposit' ? 'rgba(34,197,94,0.3)' : 'rgba(239,68,68,0.3)'}`,
-            }}>
-            {actionLoading ? <div className="spinner mx-auto" /> : modal === 'deposit' ? 'Deposit' : 'Withdraw'}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-
-  if (loading) return (
-    <div className="p-5 lg:p-7 space-y-4">
-      {[180, 120, 120, 200].map((h, i) => <div key={i} className="skeleton rounded-2xl" style={{height: h}} />)}
-    </div>
-  );
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            setVisible(true);
+            obs.disconnect();
+          }
+        });
+      },
+      { threshold: 0.15 }
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
 
   return (
-    <div className="p-5 lg:p-7 space-y-5 anim-up">
+    <div
+      ref={ref}
+      className={className}
+      style={{
+        ...style,
+        opacity: visible ? 1 : 0,
+        transform: visible ? 'translateY(0)' : 'translateY(24px)',
+        transition: `opacity 0.7s ease ${delay}ms, transform 0.7s cubic-bezier(0.16,1,0.3,1) ${delay}ms`,
+      }}
+    >
+      {children}
+    </div>
+  );
+}
 
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-xs font-semibold tracking-widest" style={{color:'var(--orange)'}}>
-            {(() => {
-              const h = new Date().getHours();
-              if (h >= 5  && h < 12) return `GOOD MORNING, ${user?.firstName?.toUpperCase()}`;
-              if (h >= 12 && h < 17) return `GOOD AFTERNOON, ${user?.firstName?.toUpperCase()}`;
-              if (h >= 17 && h < 21) return `GOOD EVENING, ${user?.firstName?.toUpperCase()}`;
-              return `GOOD NIGHT, ${user?.firstName?.toUpperCase()}`;
-            })()}
+// Animates a stat number counting up from 0 when it scrolls into view.
+// Falls back to just displaying the value statically if it can't be parsed as a number.
+function CountUpStat({ value, duration = 1200 }) {
+  const parsed = parseStat(value);
+  const [display, setDisplay] = useState(parsed ? `${parsed.prefix}0${parsed.suffix}` : value);
+  const ref = useRef(null);
+  const firedRef = useRef(false);
+
+  useEffect(() => {
+    if (!parsed) return;
+    const el = ref.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting && !firedRef.current) {
+            firedRef.current = true;
+            const start = performance.now();
+            const step = (now) => {
+              const progress = Math.min((now - start) / duration, 1);
+              const eased = 1 - Math.pow(1 - progress, 3);
+              const current = parsed.num * eased;
+              const formatted = parsed.decimals > 0
+                ? current.toFixed(parsed.decimals)
+                : Math.round(current).toLocaleString('en-US');
+              setDisplay(`${parsed.prefix}${formatted}${parsed.suffix}`);
+              if (progress < 1) requestAnimationFrame(step);
+              else setDisplay(value);
+            };
+            requestAnimationFrame(step);
+            obs.disconnect();
+          }
+        });
+      },
+      { threshold: 0.4 }
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, [value, duration]);
+
+  return <span ref={ref}>{display}</span>;
+}
+
+export default function LandingPage() {
+  const [scrolled, setScrolled]     = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const [mounted, setMounted]       = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+    const onScroll = () => setScrolled(window.scrollY > 40);
+    window.addEventListener('scroll', onScroll);
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
+  return (
+    <div style={{background:'#0B0B0C', minHeight:'100vh', fontFamily:'Inter,sans-serif', color:'#F5F3EF', overflowX:'hidden'}}>
+
+      {/* TRUST STRIP */}
+      <div style={{background:'#151515', borderBottom:'1px solid rgba(255,255,255,0.06)', padding:'8px 24px'}}>
+        <div style={{maxWidth:1200, margin:'0 auto', display:'flex', alignItems:'center', justifyContent:'center', gap:10, flexWrap:'wrap'}}>
+          <ShieldCheck size={13} style={{color:'#FF6A00', flexShrink:0}}/>
+          <p style={{fontSize:11, color:'rgba(255,255,255,0.45)', textAlign:'center'}}>
+            Nova Trust Private Banking, established 2000 — 256-bit encryption, deposits protected up to $250,000 per depositor.
           </p>
-          <h1 className="font-display text-2xl font-bold mt-0.5" style={{color:'var(--t1)'}}>Account Overview</h1>
         </div>
-        <button onClick={fetchData} className="btn-ghost p-2.5 rounded-xl"><RefreshCw size={15}/></button>
       </div>
 
-      {/* Total Balance Hero Card — always dark for readability */}
-      <div className="balance-card relative rounded-2xl overflow-hidden p-6 lg:p-8"
-        style={{
-          background: 'linear-gradient(135deg,#141414 0%,#1a1208 55%,#141414 100%)',
-          border: '1px solid rgba(255,106,0,0.18)',
-          boxShadow: '0 0 60px rgba(255,106,0,0.04)',
-        }}>
-        <div className="absolute inset-0" style={{background:'radial-gradient(ellipse at 90% 50%, rgba(255,106,0,0.08) 0%, transparent 55%)',pointerEvents:'none'}} />
-        <div className="relative z-10">
-          <p className="text-xs font-semibold tracking-widest mb-2" style={{color:'rgba(255,255,255,0.4)'}}>TOTAL ASSETS</p>
-          <div className="flex items-center gap-3 mb-5">
-            <h2 className="font-display text-4xl lg:text-5xl font-bold" style={{color:'#FFFFFF'}}>
-              {balanceVisible ? `$${totalBalance.toLocaleString('en-US',{minimumFractionDigits:2})}` : '•••••••••'}
-            </h2>
-            <button onClick={() => setBalanceVisible(!balanceVisible)} style={{color:'rgba(255,255,255,0.3)'}} className="mt-1">
-              {balanceVisible ? <EyeOff size={18}/> : <Eye size={18}/>}
+
+      {/* NAVBAR */}
+      <nav className="fixed top-0 left-0 right-0 z-50 transition-all duration-300"
+        style={{background:scrolled?'rgba(11,11,12,0.96)':'transparent', backdropFilter:scrolled?'blur(12px)':'none', borderBottom:scrolled?'1px solid rgba(255,255,255,0.06)':'1px solid transparent'}}>
+        <div style={{maxWidth:1200, margin:'0 auto', padding:'0 24px'}}>
+          <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', height:64}}>
+            <Link href="/home" style={{display:'flex', alignItems:'center', gap:10, textDecoration:'none'}}>
+              <div style={{width:32, height:32, borderRadius:10, background:'#FF6A00', display:'flex', alignItems:'center', justifyContent:'center'}}><Shield size={16} color="#000" strokeWidth={2.5}/></div>
+              <span style={{fontFamily:'Poppins,sans-serif', fontWeight:700, color:'white', fontSize:15, letterSpacing:'-0.3px'}}>NOVA TRUST</span>
+            </Link>
+
+            <div className="hidden md:flex" style={{alignItems:'center', gap:4}}>
+              {NAV_ITEMS.map(item => (
+                <a key={item.label} href={item.href} style={{padding:'6px 14px', borderRadius:8, fontSize:12, fontWeight:500, color:'rgba(255,255,255,0.5)', textDecoration:'none', transition:'color 0.15s'}}
+                  onMouseEnter={e=>e.currentTarget.style.color='#fff'} onMouseLeave={e=>e.currentTarget.style.color='rgba(255,255,255,0.5)'}>
+                  {item.label}
+                </a>
+              ))}
+            </div>
+
+            <div className="hidden md:flex" style={{alignItems:'center', gap:10}}>
+              <Link href="/login" style={{display:'flex', alignItems:'center', gap:6, padding:'8px 16px', borderRadius:10, fontSize:12, fontWeight:600, color:'rgba(255,255,255,0.7)', background:'rgba(255,255,255,0.06)', border:'1px solid rgba(255,255,255,0.08)', textDecoration:'none'}}>
+                <Lock size={11}/> Client Login
+              </Link>
+              <a href="#contact" style={{padding:'8px 16px', borderRadius:10, fontSize:12, fontWeight:600, background:'#FF6A00', color:'#000', textDecoration:'none', boxShadow:'0 4px 20px rgba(255,106,0,0.2)'}}>
+                Request Invitation
+              </a>
+            </div>
+
+            <button className="md:hidden" onClick={()=>setMobileOpen(!mobileOpen)} style={{color:'white', background:'none', border:'none'}}>
+              <Menu size={22}/>
             </button>
           </div>
-          <div className="flex flex-wrap gap-2">
-            {[
-              {label:'Deposit',  icon:Plus,     action:() => setModal('deposit'),  bg:'rgba(34,197,94,0.15)',  color:'#4ade80', border:'rgba(34,197,94,0.25)'},
-              {label:'Withdraw', icon:Download, action:() => setModal('withdraw'), bg:'rgba(239,68,68,0.12)',  color:'#f87171', border:'rgba(239,68,68,0.2)'},
-              {label:'Transfer', icon:Send,     href:'/dashboard/transfer',        bg:'rgba(255,106,0,0.15)',  color:'#FF6A00', border:'rgba(255,106,0,0.25)'},
-              {label:'Pay Bills',icon:DollarSign,href:'/dashboard/payments',       bg:'rgba(99,102,241,0.12)',color:'#818cf8', border:'rgba(99,102,241,0.2)'},
-            ].map(({label,icon:Icon,action,href,bg,color,border}) => {
-              const cls = "flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold transition hover:-translate-y-0.5";
-              const style = {background:bg, color, border:`1px solid ${border}`};
-              if (href) return <Link key={label} href={href} className={cls} style={style}><Icon size={13}/>{label}</Link>;
-              return <button key={label} onClick={action} className={cls} style={style}><Icon size={13}/>{label}</button>;
-            })}
-          </div>
         </div>
-      </div>
+      </nav>
 
-      {/* Account Cards */}
-      <div>
-        <p className="text-xs font-semibold tracking-widest mb-3" style={{color:'var(--t3)'}}>ACCOUNT BREAKDOWN</p>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {accounts.map(acc => {
-            const Icon  = ACCOUNT_ICONS[acc.accountType] || DollarSign;
-            const color = ACCOUNT_COLORS[acc.accountType] || '#FF6A00';
-            return (
-              <div key={acc.id} className="card p-5">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{background:`${color}18`, color}}>
-                      <Icon size={16}/>
-                    </div>
-                    <div>
-                      <p className="text-xs font-semibold" style={{color:'var(--t3)'}}>{acc.accountType}</p>
-                      <p className="text-xs font-mono" style={{color:'var(--t3)'}}>{acc.accountNumber?.slice(-6)}</p>
-                    </div>
-                  </div>
-                  {acc.interestRate > 0 && <span className="badge badge-green">{acc.interestRate}% APY</span>}
-                </div>
-                <p className="font-display text-2xl font-bold" style={{color:'var(--t1)'}}>
-                  {balanceVisible ? `$${acc.balance.toLocaleString('en-US',{minimumFractionDigits:2})}` : '••••••'}
-                </p>
-                <div className="flex items-center justify-between mt-2">
-                  <p className="text-xs" style={{color:'var(--t3)'}}>
-                    {acc.isActive ? 'Active' : 'Inactive'}
-                  </p>
-                  <div className="flex items-center gap-2">
-                    <div className="h-0.5 w-12 rounded-full" style={{background:`${color}40`}}>
-                      <div className="h-full rounded-full" style={{width:'70%', background:color}} />
-                    </div>
-                    {!acc.isPrimary && (
-                      <button onClick={() => deleteAccount(acc)}
-                        className="p-1 rounded-lg transition"
-                        style={{color:'var(--t3)'}}
-                        title="Remove account">
-                        <Trash2 size={12}/>
-                      </button>
-                    )}
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-
-          {/* Open new account buttons */}
-          {missingTypes.map(type => {
-            const Icon  = ACCOUNT_ICONS[type];
-            const color = ACCOUNT_COLORS[type];
-            return (
-              <button key={type} onClick={() => createAccount(type)} disabled={!!creatingAccount}
-                className="card p-5 text-left transition hover:-translate-y-0.5 disabled:opacity-50"
-                style={{borderStyle:'dashed'}}>
-                <div className="flex items-center gap-2.5 mb-3">
-                  <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{background:`${color}10`, color:'var(--t3)'}}>
-                    <Icon size={16}/>
-                  </div>
-                  <p className="text-xs font-semibold" style={{color:'var(--t3)'}}>{type}</p>
-                </div>
-                <p className="text-sm font-semibold" style={{color:'var(--t3)'}}>
-                  {creatingAccount === type ? 'Creating...' : '+ Open Account'}
-                </p>
-                <p className="text-xs mt-1" style={{color:'var(--t3)'}}>
-                  {type === 'SAVINGS' ? '2.5% APY' : type === 'INVESTMENT' ? '7.0% APY' : 'No fees'}
-                </p>
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Quick Actions */}
-      <div>
-        <p className="text-xs font-semibold tracking-widest mb-3" style={{color:'var(--t3)'}}>QUICK ACTIONS</p>
-        <div className="grid grid-cols-3 lg:grid-cols-6 gap-3">
-          {[
-            {label:'Transfer', icon:ArrowLeftRight, href:'/dashboard/transfer',            color:'#FF6A00'},
-            {label:'Zelle',    icon:Zap,            href:'/dashboard/payments?tab=zelle',  color:'#7C3AED'},
-            {label:'Cash App', icon:Smartphone,     href:'/dashboard/payments?tab=cashapp',color:'#16a34a'},
-            {label:'Loans',    icon:Landmark,       href:'/dashboard/loans',               color:'#6366f1'},
-            {label:'Pay Bills',icon:DollarSign,     href:'/dashboard/payments?tab=bills',  color:'#d97706'},
-            {label:'Deposit',  icon:Camera,         href:'/dashboard/mobile-deposit',      color:'#0891b2'},
-          ].map(({label,icon:Icon,href,color}) => (
-            <Link key={label} href={href}
-              className="card flex flex-col items-center justify-center py-4 gap-2 transition hover:-translate-y-0.5">
-              <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{background:`${color}15`, color}}>
-                <Icon size={17}/>
-              </div>
-              <p className="text-xs font-medium" style={{color:'var(--t2)'}}>{label}</p>
-            </Link>
-          ))}
-        </div>
-      </div>
-
-      {/* Charts + Recent Activity */}
-      <div className="grid lg:grid-cols-5 gap-5">
-        {/* Chart */}
-        <div className="lg:col-span-3 card p-5">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <p className="text-xs font-semibold tracking-widest" style={{color:'var(--t3)'}}>CASH FLOW</p>
-              <h3 className="font-display font-semibold mt-0.5" style={{color:'var(--t1)'}}>Income vs Spending</h3>
+      {/* Mobile drawer — slides in from the right */}
+      <div className="md:hidden" aria-hidden={!mobileOpen} style={{
+        position:'fixed', inset:0, zIndex:60,
+        pointerEvents: mobileOpen ? 'auto' : 'none',
+      }}>
+        {/* Backdrop */}
+        <div onClick={()=>setMobileOpen(false)} style={{
+          position:'absolute', inset:0, background:'rgba(0,0,0,0.6)',
+          opacity: mobileOpen ? 1 : 0, transition:'opacity 0.3s ease',
+        }}/>
+        {/* Panel */}
+        <div style={{
+          position:'absolute', top:0, right:0, bottom:0, width:'78%', maxWidth:320,
+          background:'#0F0F0F', borderLeft:'1px solid rgba(255,255,255,0.08)',
+          boxShadow:'-8px 0 40px rgba(0,0,0,0.5)',
+          transform: mobileOpen ? 'translateX(0)' : 'translateX(100%)',
+          transition:'transform 0.32s cubic-bezier(0.32,0.72,0,1)',
+          display:'flex', flexDirection:'column', padding:'20px 24px',
+        }}>
+          <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:28}}>
+            <div style={{display:'flex', alignItems:'center', gap:10}}>
+              <div style={{width:28, height:28, borderRadius:8, background:'#FF6A00', display:'flex', alignItems:'center', justifyContent:'center'}}><Shield size={13} color="#000" strokeWidth={2.5}/></div>
+              <span style={{fontFamily:'Poppins,sans-serif', fontWeight:700, color:'white', fontSize:13}}>NOVA TRUST</span>
             </div>
-            <span className="badge badge-green"><TrendingUp size={10}/>+18.4%</span>
+            <button onClick={()=>setMobileOpen(false)} style={{color:'rgba(255,255,255,0.5)', background:'none', border:'none', padding:4}}>
+              <X size={20}/>
+            </button>
           </div>
-          <ResponsiveContainer width="100%" height={160}>
-            <BarChart data={chartData} barSize={8} barGap={4}>
-              <XAxis dataKey="m" tick={{fontSize:11, fill:'var(--t3)'}} axisLine={false} tickLine={false}/>
-              <Tooltip
-                contentStyle={{background:'var(--s2)', border:'1px solid var(--border)', borderRadius:10, fontSize:12, color:'var(--t1)'}}
-                formatter={(v,n) => [`$${v.toLocaleString()}`, n==='i'?'Income':'Spending']}
+
+          <div style={{display:'flex', flexDirection:'column', gap:2}}>
+            {NAV_ITEMS.map(item => (
+              <a key={item.label} href={item.href} onClick={()=>setMobileOpen(false)} style={{padding:'12px 4px', fontSize:15, fontWeight:500, color:'rgba(255,255,255,0.75)', textDecoration:'none', borderBottom:'1px solid rgba(255,255,255,0.05)'}}>
+                {item.label}
+              </a>
+            ))}
+          </div>
+
+          <div style={{marginTop:'auto', display:'flex', flexDirection:'column', gap:10, paddingTop:20}}>
+            <Link href="/login" onClick={()=>setMobileOpen(false)} style={{textAlign:'center', padding:'12px', borderRadius:10, fontSize:13, fontWeight:600, color:'white', background:'rgba(255,255,255,0.06)', border:'1px solid rgba(255,255,255,0.08)', textDecoration:'none'}}>Client Login</Link>
+            <a href="#contact" onClick={()=>setMobileOpen(false)} style={{textAlign:'center', padding:'12px', borderRadius:10, fontSize:13, fontWeight:600, background:'#FF6A00', color:'#000', textDecoration:'none'}}>Request Invitation</a>
+          </div>
+        </div>
+      </div>
+
+      {/* HERO */}
+      <section style={{minHeight:'80vh', display:'flex', alignItems:'center', position:'relative', overflow:'hidden', paddingTop:64}}>
+        {/* Vault rings — signature element, now a background accent behind centered copy */}
+        <div aria-hidden style={{
+          position:'absolute', top:'50%', left:'50%', transform:'translate(-50%,-50%)',
+          width:900, height:900, pointerEvents:'none',
+          opacity: mounted ? 0.5 : 0, transition:'opacity 1.2s ease',
+        }}>
+          <svg viewBox="0 0 720 720" width="900" height="900" style={{animation:'novaSpin 140s linear infinite'}}>
+            <defs>
+              <radialGradient id="ringGlow" cx="50%" cy="50%" r="50%">
+                <stop offset="0%" stopColor="#FF6A00" stopOpacity="0.14"/>
+                <stop offset="100%" stopColor="#FF6A00" stopOpacity="0"/>
+              </radialGradient>
+            </defs>
+            <circle cx="360" cy="360" r="340" fill="url(#ringGlow)"/>
+            {[330, 280, 232, 186, 142].map((r,i) => (
+              <circle key={r} cx="360" cy="360" r={r} fill="none"
+                stroke={i % 2 === 0 ? 'rgba(255,106,0,0.22)' : 'rgba(255,255,255,0.06)'}
+                strokeWidth={i === 0 ? 1.5 : 1}
+                strokeDasharray={i % 2 === 0 ? '2 10' : 'none'}
               />
-              <Bar dataKey="i" fill="rgba(255,106,0,0.7)" radius={[4,4,0,0]}/>
-              <Bar dataKey="o" fill="rgba(239,68,68,0.4)"  radius={[4,4,0,0]}/>
-            </BarChart>
-          </ResponsiveContainer>
-          <div className="flex gap-4 mt-3">
-            {[{l:'Income',c:'rgba(255,106,0,0.7)'},{l:'Spending',c:'rgba(239,68,68,0.5)'}].map(x => (
-              <div key={x.l} className="flex items-center gap-1.5">
-                <div className="w-2.5 h-2.5 rounded-full" style={{background:x.c}}/>
-                <p className="text-xs" style={{color:'var(--t3)'}}>{x.l}</p>
+            ))}
+            {Array.from({length:24}).map((_,i) => {
+              const angle = (i / 24) * Math.PI * 2;
+              const x1 = 360 + Math.cos(angle) * 100, y1 = 360 + Math.sin(angle) * 100;
+              const x2 = 360 + Math.cos(angle) * 142, y2 = 360 + Math.sin(angle) * 142;
+              return <line key={i} x1={x1} y1={y1} x2={x2} y2={y2} stroke="rgba(255,255,255,0.05)" strokeWidth="1"/>;
+            })}
+            <circle cx="360" cy="360" r="76" fill="#0B0B0C" stroke="rgba(255,106,0,0.35)" strokeWidth="1.5"/>
+            <circle cx="360" cy="360" r="8" fill="#FF6A00"/>
+          </svg>
+        </div>
+        <div style={{position:'absolute', inset:0, backgroundImage:'linear-gradient(rgba(255,255,255,0.015) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.015) 1px, transparent 1px)', backgroundSize:'64px 64px', pointerEvents:'none'}}/>
+
+        <div style={{maxWidth:900, margin:'0 auto', padding:'60px 24px', width:'100%', position:'relative', zIndex:1, textAlign:'center'}}>
+          <Reveal delay={0} style={{display:'inline-flex', alignItems:'center', gap:8, padding:'6px 14px', borderRadius:100, background:'rgba(255,106,0,0.1)', border:'1px solid rgba(255,106,0,0.2)', marginBottom:24}}>
+            <div style={{width:6, height:6, borderRadius:'50%', background:'#FF6A00'}}/>
+            <span style={{fontFamily:'monospace', fontSize:11, fontWeight:600, color:'#FF6A00', letterSpacing:'0.08em'}}>BY INVITATION ONLY</span>
+          </Reveal>
+          <Reveal delay={100}>
+            <h1 style={{fontFamily:'Poppins,sans-serif', fontWeight:800, fontSize:'clamp(36px,5.5vw,60px)', lineHeight:1.05, color:'white', marginBottom:20}}>
+              Private Banking<br/>
+              <span style={{color:'#FF6A00'}}>for Selected</span> Clients Only.
+            </h1>
+          </Reveal>
+          <Reveal delay={200}>
+            <p style={{fontSize:15, lineHeight:1.7, color:'rgba(255,255,255,0.45)', marginBottom:36, maxWidth:520, marginLeft:'auto', marginRight:'auto'}}>
+              Nova Trust delivers an exclusive financial experience reserved for distinguished individuals. Manage wealth, transfers, and investments through a platform built for precision and privacy.
+            </p>
+          </Reveal>
+          <Reveal delay={300} style={{display:'flex', gap:12, marginBottom:56, flexWrap:'wrap', justifyContent:'center'}}>
+            <Link href="/login" style={{display:'flex', alignItems:'center', gap:8, padding:'14px 28px', borderRadius:12, background:'#FF6A00', color:'#000', fontWeight:600, fontSize:14, textDecoration:'none', boxShadow:'0 4px 24px rgba(255,106,0,0.25)'}}>
+              Client Login <ArrowRight size={16}/>
+            </Link>
+            <a href="#contact" style={{display:'flex', alignItems:'center', gap:8, padding:'14px 28px', borderRadius:12, background:'rgba(255,255,255,0.05)', border:'1px solid rgba(255,255,255,0.08)', color:'rgba(255,255,255,0.65)', fontWeight:600, fontSize:14, textDecoration:'none'}}>
+              Request Invitation
+            </a>
+          </Reveal>
+          <Reveal delay={400} style={{display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:20, paddingTop:28, borderTop:'1px solid rgba(255,255,255,0.06)', maxWidth:640, margin:'0 auto'}}>
+            {STATS.map(s=>(
+              <div key={s.l}>
+                <p style={{fontFamily:'monospace', fontWeight:700, fontSize:19, color:'white'}}><CountUpStat value={s.v}/></p>
+                <p style={{fontSize:10.5, color:'rgba(255,255,255,0.32)', marginTop:3}}>{s.l}</p>
               </div>
+            ))}
+          </Reveal>
+        </div>
+      </section>
+
+      {/* CARD CHOOSER — 4-column stat grid, dark-to-orange gradient, echoes real CardTier product data */}
+      <section style={{
+        padding:'96px 24px',
+        background:'linear-gradient(180deg, #0B0B0C 0%, #1a1208 55%, #0B0B0C 100%)',
+        borderTop:'1px solid rgba(255,255,255,0.05)',
+      }}>
+        <div style={{maxWidth:1200, margin:'0 auto'}}>
+          <Reveal>
+            <h2 style={{fontFamily:'Poppins,sans-serif', fontWeight:800, fontSize:'clamp(30px,4vw,44px)', color:'white', lineHeight:1.1, marginBottom:56}}>
+              Choose the card that works for you
+            </h2>
+          </Reveal>
+
+          <div style={{display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:20}} className="card-chooser-grid">
+            {CARD_TIERS.map((c,i) => (
+              <Reveal key={c.tier} delay={i*90} style={{display:'flex', flexDirection:'column', alignItems:'center', textAlign:'center'}}>
+
+                {/* Stat */}
+                <div style={{marginBottom:18}}>
+                  <span style={{fontFamily:'Poppins,sans-serif', fontWeight:800, fontSize:44, color:'white', lineHeight:1}}>{c.stat}</span>
+                  {c.statUnit && <span style={{fontFamily:'Poppins,sans-serif', fontWeight:700, fontSize:18, color:'white', verticalAlign:'top', position:'relative', top:4}}>{c.statUnit}</span>}
+                </div>
+                <p style={{fontSize:13, color:'rgba(255,255,255,0.6)', marginBottom:2}}>{c.caption}</p>
+                <p style={{fontSize:13, color:'rgba(255,255,255,0.6)', marginBottom:20}}>{c.sub}</p>
+
+                {/* Card mockup */}
+                <div style={{
+                  width:'100%', maxWidth:220, height:140, borderRadius:14, position:'relative',
+                  background:c.gradient, boxShadow:'0 12px 32px rgba(0,0,0,0.4)',
+                  padding:'14px 16px', boxSizing:'border-box',
+                  border:'1px solid rgba(255,255,255,0.08)', marginBottom:16,
+                }}>
+                  {c.badge && (
+                    <div style={{position:'absolute', top:0, left:0, background:'#FF6A00', color:'#000', fontSize:8.5, fontWeight:700, letterSpacing:'0.05em', padding:'3px 8px', borderRadius:'14px 0 8px 0'}}>
+                      {c.badge}
+                    </div>
+                  )}
+                  <div style={{display:'flex', alignItems:'center', justifyContent:'space-between'}}>
+                    <div style={{display:'flex', alignItems:'center', gap:5}}>
+                      <div style={{width:14, height:14, borderRadius:4, background:c.accent}}/>
+                      <span style={{fontFamily:'Poppins,sans-serif', fontWeight:700, fontSize:9.5, color:c.textColor, letterSpacing:'-0.2px'}}>NOVA TRUST</span>
+                    </div>
+                    <Wifi size={13} style={{color:c.textColor, opacity:0.6, transform:'rotate(90deg)'}}/>
+                  </div>
+                  <div style={{position:'absolute', left:16, top:54, width:26, height:20, borderRadius:4, background:'linear-gradient(135deg,#d4af37,#f5d576)'}}/>
+                  <div style={{position:'absolute', left:16, bottom:12}}>
+                    <p style={{fontSize:8, fontWeight:600, letterSpacing:'0.08em', color:c.textColor, opacity:0.6}}>{c.tier}</p>
+                  </div>
+                  <div style={{position:'absolute', right:16, bottom:12}}>
+                    <p style={{fontFamily:'Poppins,sans-serif', fontWeight:700, fontSize:11, fontStyle:'italic', color:c.textColor}}>VISA</p>
+                  </div>
+                </div>
+
+                <p style={{fontSize:13, fontWeight:600, color:'rgba(255,255,255,0.7)', marginBottom:12}}>{c.name}</p>
+
+                {/* Bonus badge */}
+                <a href="#contact" style={{
+                  width:'100%', background:'white', borderRadius:12, padding:'12px 14px',
+                  textDecoration:'none', display:'block',
+                }}>
+                  <span style={{fontSize:13, fontWeight:700, color:'#FF6A00', textDecoration:'underline', lineHeight:1.4}}>{c.bonus}</span>
+                </a>
+              </Reveal>
             ))}
           </div>
         </div>
+      </section>
 
-        {/* Recent Activity */}
-        <div className="lg:col-span-2 card overflow-hidden">
-          <div className="flex items-center justify-between px-5 py-4" style={{borderBottom:'1px solid var(--border)'}}>
-            <h3 className="font-display font-semibold text-sm" style={{color:'var(--t1)'}}>Recent Activity</h3>
-            <Link href="/dashboard/transfer" className="text-xs font-semibold" style={{color:'var(--orange)'}}>All →</Link>
-          </div>
-          <div className="px-4 py-2">
-            {transactions.length === 0 ? (
-              <div className="py-10 text-center" style={{color:'var(--t3)'}}>
-                <ArrowLeftRight size={24} className="mx-auto mb-2 opacity-30"/>
-                <p className="text-xs">No activity yet</p>
-              </div>
-            ) : transactions.map(tx => {
-              const credit = isCredit(tx);
-              const color  = credit ? '#22c55e' : '#ef4444';
-              return (
-                <div key={tx.id} className="flex items-center gap-3 py-3" style={{borderBottom:'1px solid var(--border)'}}>
-                  <div className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0"
-                    style={{background:credit?'rgba(34,197,94,0.1)':'rgba(239,68,68,0.1)'}}>
-                    {txIcon(tx.type)}
+      {/* SERVICES — color-coded to match the actual product's account types */}
+      <section id="services" style={{padding:'96px 24px', borderTop:'1px solid rgba(255,255,255,0.05)'}}>
+        <div style={{maxWidth:1200, margin:'0 auto'}}>
+          <Reveal style={{marginBottom:56, maxWidth:560}}>
+            <p style={{fontFamily:'monospace', fontSize:11, fontWeight:600, letterSpacing:'0.1em', color:'#FF6A00', marginBottom:12}}>ACCOUNTS</p>
+            <h2 style={{fontFamily:'Poppins,sans-serif', fontWeight:700, fontSize:'clamp(28px,3.5vw,36px)', color:'white', lineHeight:1.2}}>Three accounts. One relationship.</h2>
+          </Reveal>
+          <div style={{display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:20}} className="services-grid">
+            {SERVICES.map((s,i) => (
+              <Reveal key={s.type} delay={i*100}>
+                <div style={{padding:28, borderRadius:18, background:'rgba(255,255,255,0.025)', border:'1px solid rgba(255,255,255,0.07)', transition:'transform 0.2s, border-color 0.2s'}}
+                  onMouseEnter={e=>{e.currentTarget.style.transform='translateY(-4px)'; e.currentTarget.style.borderColor=`${s.color}40`;}}
+                  onMouseLeave={e=>{e.currentTarget.style.transform='translateY(0)'; e.currentTarget.style.borderColor='rgba(255,255,255,0.07)';}}>
+                  <div style={{width:44, height:44, borderRadius:13, background:`${s.color}18`, display:'flex', alignItems:'center', justifyContent:'center', marginBottom:20, color:s.color}}>
+                    <s.icon size={20}/>
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-medium truncate" style={{color:'var(--t1)'}}>{tx.description || tx.type}</p>
-                    <p className="text-xs" style={{color:'var(--t3)'}}>{format(new Date(tx.createdAt),'MMM d')}</p>
+                  <p style={{fontFamily:'monospace', fontSize:10, fontWeight:600, letterSpacing:'0.08em', color:s.color, marginBottom:8}}>{s.type}</p>
+                  <h3 style={{fontFamily:'Poppins,sans-serif', fontWeight:600, color:'white', marginBottom:10, fontSize:18}}>{s.title}</h3>
+                  <p style={{fontSize:13, color:'rgba(255,255,255,0.4)', lineHeight:1.6, marginBottom:20}}>{s.desc}</p>
+                  <div style={{display:'flex', flexDirection:'column', gap:8}}>
+                    {s.points.map(p => (
+                      <div key={p} style={{display:'flex', alignItems:'center', gap:8}}>
+                        <CheckCircle2 size={13} style={{color:s.color, flexShrink:0}}/>
+                        <span style={{fontSize:12.5, color:'rgba(255,255,255,0.55)'}}>{p}</span>
+                      </div>
+                    ))}
                   </div>
-                  <p className="text-xs font-semibold flex-shrink-0" style={{color}}>{credit?'+':'-'}${tx.amount.toFixed(2)}</p>
                 </div>
-              );
-            })}
+              </Reveal>
+            ))}
           </div>
         </div>
-      </div>
+      </section>
 
-      {modal && <Modal/>}
+      {/* SECURITY / FEATURES */}
+      {/* BUSINESS */}
+      <section id="business" style={{padding:'96px 24px', borderTop:'1px solid rgba(255,255,255,0.05)'}}>
+        <div style={{maxWidth:1200, margin:'0 auto'}}>
+          <Reveal style={{marginBottom:56, maxWidth:560}}>
+            <p style={{fontFamily:'monospace', fontSize:11, fontWeight:600, letterSpacing:'0.1em', color:'#FF6A00', marginBottom:12}}>FOR BUSINESSES</p>
+            <h2 style={{fontFamily:'Poppins,sans-serif', fontWeight:700, fontSize:'clamp(28px,3.5vw,36px)', color:'white', lineHeight:1.2, marginBottom:16}}>Banking built to run a business on.</h2>
+            <p style={{fontSize:14, color:'rgba(255,255,255,0.4)', lineHeight:1.7}}>From a single operating account to full payroll and merchant processing — a commercial banker manages your relationship end to end.</p>
+          </Reveal>
+          <div style={{display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:16}} className="features-grid">
+            {BUSINESS_SERVICES.map((b,i) => (
+              <Reveal key={b.title} delay={i*90}>
+                <div style={{padding:24, borderRadius:16, background:'rgba(255,255,255,0.03)', border:'1px solid rgba(255,255,255,0.06)', transition:'transform 0.2s'}}
+                  onMouseEnter={e=>e.currentTarget.style.transform='translateY(-4px)'}
+                  onMouseLeave={e=>e.currentTarget.style.transform='translateY(0)'}>
+                  <div style={{width:40, height:40, borderRadius:12, background:'rgba(255,106,0,0.1)', display:'flex', alignItems:'center', justifyContent:'center', marginBottom:16, color:'#FF6A00'}}><b.icon size={18}/></div>
+                  <h3 style={{fontFamily:'Poppins,sans-serif', fontWeight:600, color:'white', marginBottom:8, fontSize:15}}>{b.title}</h3>
+                  <p style={{fontSize:13, color:'rgba(255,255,255,0.35)', lineHeight:1.6}}>{b.desc}</p>
+                </div>
+              </Reveal>
+            ))}
+          </div>
+          <Reveal style={{marginTop:40, textAlign:'center'}}>
+            <a href="#contact" style={{display:'inline-flex', alignItems:'center', gap:8, padding:'13px 22px', borderRadius:12, background:'rgba(255,106,0,0.1)', border:'1px solid rgba(255,106,0,0.25)', color:'#FF6A00', fontWeight:600, fontSize:13, textDecoration:'none'}}>
+              Talk to a Commercial Banker <ArrowRight size={14}/>
+            </a>
+          </Reveal>
+        </div>
+      </section>
+
+      <section id="security" style={{padding:'96px 24px', borderTop:'1px solid rgba(255,255,255,0.05)'}}>
+        <div style={{maxWidth:1200, margin:'0 auto'}}>
+          <Reveal style={{textAlign:'center', marginBottom:56}}>
+            <p style={{fontFamily:'monospace', fontSize:11, fontWeight:600, letterSpacing:'0.1em', color:'#FF6A00', marginBottom:12}}>WHY NOVA TRUST</p>
+            <h2 style={{fontFamily:'Poppins,sans-serif', fontWeight:700, fontSize:'clamp(28px,3.5vw,36px)', color:'white'}}>Financial excellence,<br/>engineered for you.</h2>
+          </Reveal>
+          <div style={{display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:16}} className="features-grid">
+            {[
+              {icon:Lock,     title:'Military-grade Security', desc:'256-bit encryption protecting every transaction and session.'},
+              {icon:Globe,    title:'Global Access',           desc:'Access your portfolio securely from anywhere, 24/7.'},
+              {icon:BarChart2,title:'Smart Insights',          desc:'Real-time analytics across all your accounts and investments.'},
+              {icon:Users,    title:'Dedicated Support',       desc:'Private banking advisors exclusively for our clients.'},
+            ].map((f,i)=>(
+              <Reveal key={f.title} delay={i*90}>
+                <div style={{padding:24, borderRadius:16, background:'rgba(255,255,255,0.03)', border:'1px solid rgba(255,255,255,0.06)', transition:'transform 0.2s'}}
+                  onMouseEnter={e=>e.currentTarget.style.transform='translateY(-4px)'}
+                  onMouseLeave={e=>e.currentTarget.style.transform='translateY(0)'}>
+                  <div style={{width:40, height:40, borderRadius:12, background:'rgba(255,106,0,0.1)', display:'flex', alignItems:'center', justifyContent:'center', marginBottom:16, color:'#FF6A00'}}><f.icon size={18}/></div>
+                  <h3 style={{fontFamily:'Poppins,sans-serif', fontWeight:600, color:'white', marginBottom:8, fontSize:15}}>{f.title}</h3>
+                  <p style={{fontSize:13, color:'rgba(255,255,255,0.35)', lineHeight:1.6}}>{f.desc}</p>
+                </div>
+              </Reveal>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ABOUT */}
+      <section id="about" style={{padding:'96px 24px', borderTop:'1px solid rgba(255,255,255,0.05)'}}>
+        <div style={{maxWidth:1200, margin:'0 auto', display:'grid', gridTemplateColumns:'1fr 1fr', gap:64, alignItems:'center'}} className="about-grid">
+          <Reveal>
+            <p style={{fontFamily:'monospace', fontSize:11, fontWeight:600, letterSpacing:'0.1em', color:'#FF6A00', marginBottom:12}}>ABOUT US</p>
+            <h2 style={{fontFamily:'Poppins,sans-serif', fontWeight:700, fontSize:'clamp(26px,3vw,32px)', color:'white', marginBottom:20, lineHeight:1.25}}>
+              Built for people who expect more from a bank.
+            </h2>
+            <p style={{fontSize:14, color:'rgba(255,255,255,0.45)', lineHeight:1.8, marginBottom:16}}>
+              Since 2000, Nova Trust has operated on a simple premise: private banking should feel effortless, not exclusive for its own sake. Every account comes with a dedicated advisor, real-time visibility into your money, and infrastructure built to institutional standards.
+            </p>
+            <p style={{fontSize:14, color:'rgba(255,255,255,0.45)', lineHeight:1.8}}>
+              We manage checking, savings, and investment accounts under one relationship — so your advisor sees the full picture, not just one product.
+            </p>
+          </Reveal>
+          <Reveal delay={150} style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:16}}>
+            {[
+              {v:'2000', l:'Founded'},
+              {v:'12,400+', l:'Clients Served'},
+              {v:'A+', l:'Trust Rating'},
+              {v:'$0', l:'Monthly Fees'},
+            ].map(s => (
+              <div key={s.l} style={{padding:24, borderRadius:16, background:'rgba(255,255,255,0.03)', border:'1px solid rgba(255,255,255,0.06)'}}>
+                <p style={{fontFamily:'monospace', fontWeight:700, fontSize:24, color:'#FF6A00'}}><CountUpStat value={s.v}/></p>
+                <p style={{fontSize:11.5, color:'rgba(255,255,255,0.35)', marginTop:4}}>{s.l}</p>
+              </div>
+            ))}
+          </Reveal>
+        </div>
+      </section>
+
+      {/* CONTACT */}
+      <section id="contact" style={{padding:'96px 24px', borderTop:'1px solid rgba(255,255,255,0.05)'}}>
+        <div style={{maxWidth:1200, margin:'0 auto', display:'grid', gridTemplateColumns:'1fr 1fr', gap:64, alignItems:'start'}} className="about-grid">
+          <Reveal>
+            <p style={{fontFamily:'monospace', fontSize:11, fontWeight:600, letterSpacing:'0.1em', color:'#FF6A00', marginBottom:12}}>CONTACT US</p>
+            <h2 style={{fontFamily:'Poppins,sans-serif', fontWeight:700, fontSize:32, color:'white', marginBottom:16}}>Get in touch.</h2>
+            <p style={{fontSize:14, color:'rgba(255,255,255,0.4)', lineHeight:1.7, marginBottom:32}}>Schedule a private consultation. Access to Nova Trust is by invitation only.</p>
+            {[{icon:Phone,text:'+1 (800) NOVA-TRUST'},{icon:Mail,text:'private@novatrust.com'},{icon:MapPin,text:'One Private Plaza, New York, NY 10004'}].map(({icon:Icon,text})=>(
+              <div key={text} style={{display:'flex', alignItems:'center', gap:12, marginBottom:16}}>
+                <div style={{width:36, height:36, borderRadius:10, background:'rgba(255,106,0,0.1)', display:'flex', alignItems:'center', justifyContent:'center', color:'#FF6A00', flexShrink:0}}><Icon size={15}/></div>
+                <p style={{fontSize:13, color:'rgba(255,255,255,0.5)'}}>{text}</p>
+              </div>
+            ))}
+          </Reveal>
+          <Reveal delay={150} style={{background:'rgba(255,255,255,0.03)', border:'1px solid rgba(255,255,255,0.08)', borderRadius:20, padding:28}}>
+            <h3 style={{fontFamily:'Poppins,sans-serif', fontWeight:600, color:'white', marginBottom:20}}>Request an Invitation</h3>
+            {[{l:'FULL NAME',p:'Your name'},{l:'EMAIL',p:'your@email.com'},{l:'PHONE',p:'+1 (555) 000-0000'}].map(f=>(
+              <div key={f.l} style={{marginBottom:14}}>
+                <label style={{display:'block', fontSize:10, fontWeight:600, letterSpacing:'0.08em', color:'rgba(255,255,255,0.35)', marginBottom:6}}>{f.l}</label>
+                <input type="text" style={{width:'100%', background:'rgba(255,255,255,0.05)', border:'1px solid rgba(255,255,255,0.08)', borderRadius:10, padding:'11px 14px', color:'white', fontSize:13, boxSizing:'border-box', outline:'none'}} placeholder={f.p}/>
+              </div>
+            ))}
+            <div style={{marginBottom:16}}>
+              <label style={{display:'block', fontSize:10, fontWeight:600, letterSpacing:'0.08em', color:'rgba(255,255,255,0.35)', marginBottom:6}}>MESSAGE</label>
+              <textarea rows={3} style={{width:'100%', background:'rgba(255,255,255,0.05)', border:'1px solid rgba(255,255,255,0.08)', borderRadius:10, padding:'11px 14px', color:'white', fontSize:13, boxSizing:'border-box', outline:'none', resize:'none'}} placeholder="Tell us about your needs..."/>
+            </div>
+            <button style={{width:'100%', padding:'13px', borderRadius:10, background:'#FF6A00', color:'#000', fontWeight:600, fontSize:14, border:'none', cursor:'pointer', boxShadow:'0 4px 20px rgba(255,106,0,0.2)'}}>Submit Request</button>
+          </Reveal>
+        </div>
+      </section>
+
+      {/* FOOTER */}
+      <footer style={{padding:'32px 24px', borderTop:'1px solid rgba(255,255,255,0.05)'}}>
+        <div style={{maxWidth:1200, margin:'0 auto', display:'flex', alignItems:'center', justifyContent:'space-between', flexWrap:'wrap', gap:16}}>
+          <div style={{display:'flex', alignItems:'center', gap:10}}>
+            <div style={{width:28, height:28, borderRadius:8, background:'#FF6A00', display:'flex', alignItems:'center', justifyContent:'center'}}><Shield size={13} color="#000"/></div>
+            <span style={{fontFamily:'Poppins,sans-serif', fontWeight:700, color:'white', fontSize:13}}>NOVA TRUST</span>
+          </div>
+          <p style={{fontSize:11, color:'rgba(255,255,255,0.2)'}}>© 2024 Nova Trust Private Banking. For selected clients only.</p>
+          <div style={{display:'flex', gap:20}}>
+            {['Privacy','Terms','Security'].map(l=><a key={l} href="#" style={{fontSize:11, color:'rgba(255,255,255,0.25)', textDecoration:'none'}}>{l}</a>)}
+          </div>
+        </div>
+      </footer>
+
+      <style jsx global>{`
+        @keyframes novaSpin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        @media (max-width: 860px) {
+          .hero-grid, .about-grid { grid-template-columns: 1fr !important; }
+          .services-grid, .features-grid, .card-chooser-grid { grid-template-columns: 1fr 1fr !important; }
+        }
+        @media (max-width: 560px) {
+          .services-grid, .features-grid, .card-chooser-grid { grid-template-columns: 1fr !important; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          * { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; }
+        }
+      `}</style>
     </div>
   );
 }
